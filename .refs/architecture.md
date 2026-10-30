@@ -133,5 +133,15 @@ One static binary and one SQLite file:
 
 ## Known gaps
 
-Everything is a scaffold: crates are empty, `web/` and `docker/` are
-placeholders. The roadmap above is the order of work.
+- `core` has `UidSet`, `Flags`, `Address`, `Unsubscribe`, `MessageMeta`;
+  the query DSL and rule model are not written yet.
+- `store`, `imap`, `unsub`, `server` are empty crates; `web/` and `docker/`
+  are placeholders. The roadmap above is the order of work.
+
+## UidSet rules
+
+- UID `0` is invalid in IMAP and is dropped on construction.
+- `chunks_by_count` bounds how many messages one command touches (progress
+  granularity, server timeouts); `chunks_by_encoded_len` bounds command
+  length, since many servers reject lines past roughly 8–64 KB. Bulk
+  actions should apply both.
