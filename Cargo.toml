@@ -1,0 +1,19 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+
+[workspace.dependencies]
+mail-sieve-core = { path = "crates/core" }
+mail-sieve-store = { path = "crates/store" }
+mail-sieve-imap = { path = "crates/imap" }
+mail-sieve-unsub = { path = "crates/unsub" }
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = true

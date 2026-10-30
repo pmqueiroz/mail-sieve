@@ -1,0 +1,11 @@
+[package]
+name = "mail-sieve"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+mail-sieve-core.workspace = true
+mail-sieve-store.workspace = true
+mail-sieve-imap.workspace = true
+mail-sieve-unsub.workspace = true
