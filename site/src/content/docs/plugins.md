@@ -124,9 +124,17 @@ A community plugin is a folder inside `plugins/` in the data directory (`/data/p
   "version": "0.1.0",
   "description": "Shows the current page in a badge.",
   "author": "you",
-  "entry": "index.js"
+  "entry": "index.js",
+  "avatar": { "icon": "zap", "color": "teal" }
 }
 ```
+
+`avatar` picks the icon and color shown on the plugin's card. There are no image uploads, so every plugin matches the rest of the app. If the icon is missing or unknown, the card shows the plugin's initials instead; a missing or unknown color is picked from the plugin id, so it stays the same.
+
+| Field | Values |
+| --- | --- |
+| `icon` | `ghost` `undo` `calendar` `list-checks` `search` `bell-off` `sparkles` `shield` `zap` `mail` `inbox` `tag` `archive` `trash` `filter` `clock` `star` `lock` `link` `chart` `paperclip` `send` `bot` `globe` `code` `flame` `leaf` `moon` `eye` |
+| `color` | `gray` `red` `orange` `yellow` `green` `teal` `blue` `violet` `pink` |
 
 The entry is an ES module whose default export is the plugin. A slot receives a DOM element to render into, the host API and a context, and returns a cleanup function. `configure`, if present, has the same shape and fills the Configure window; its third argument has `close()`. `setup` runs once when the plugin is enabled, for behavior without UI.
 
