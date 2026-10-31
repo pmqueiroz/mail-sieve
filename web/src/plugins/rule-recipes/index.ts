@@ -6,6 +6,6 @@ export const ruleRecipes: CorePlugin = {
   name: 'Rule recipes',
   description: 'Starter rules on the Rules page, such as archiving old receipts or clearing stale promotions, each with a live count of what it would match.',
   version: '1.0.0',
-  defaultEnabled: true,
+  defaultEnabled: false,
   slots: { rules: RuleRecipes },
 };
