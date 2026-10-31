@@ -1,7 +1,6 @@
 services:
   mail-sieve:
-    build: ..
-    image: mail-sieve:latest
+    image: ghcr.io/pmqueiroz/mail-sieve:latest
     restart: unless-stopped
     ports:
       - "${MAIL_SIEVE_HOST_IP:-127.0.0.1}:${MAIL_SIEVE_PORT:-8080}:8080"
