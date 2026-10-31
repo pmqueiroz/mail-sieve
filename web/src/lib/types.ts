@@ -175,3 +175,25 @@ export type UnsubscribeOutcome =
   | { status: 'failed'; error: string };
 
 export type ServerEvent = { type: 'job'; job: Job } | { type: 'account'; account_id: number };
+
+export interface CommunityPluginManifest {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+  entry_url: string | null;
+  error: string | null;
+}
+
+export interface PluginList {
+  states: Record<string, boolean>;
+  community: CommunityPluginManifest[];
+}
+
+export interface PluginConfig<T = unknown> {
+  settings: T | null;
+  secrets: string[];
+}
+
+export type AiProviderKind = 'anthropic' | 'openai';

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { errorMessage } from './lib/api';
   import Button from './lib/components/Button.svelte';
   import ConnectDialog from './lib/components/ConnectDialog.svelte';
@@ -6,14 +7,18 @@
   import NavRail from './lib/components/NavRail.svelte';
   import Toasts from './lib/components/Toasts.svelte';
   import TopBar from './lib/components/TopBar.svelte';
+  import PluginSlot from './lib/plugins/PluginSlot.svelte';
+  import { plugins } from './lib/plugins/registry.svelte';
   import { router } from './lib/router.svelte';
   import { session } from './lib/session.svelte';
+  import { toasts } from './lib/toasts.svelte';
   import { ui } from './lib/ui.svelte';
   import Accounts from './routes/Accounts.svelte';
   import Activity from './routes/Activity.svelte';
   import Login from './routes/Login.svelte';
   import Messages from './routes/Messages.svelte';
   import Overview from './routes/Overview.svelte';
+  import Plugins from './routes/Plugins.svelte';
   import Rules from './routes/Rules.svelte';
   import Senders from './routes/Senders.svelte';
 
@@ -21,6 +26,10 @@
 
   $effect(() => {
     session.boot().catch((error) => (bootError = errorMessage(error)));
+  });
+
+  $effect(() => {
+    if (session.status?.authenticated && !plugins.loaded) untrack(() => plugins.load().catch((error) => toasts.show(errorMessage(error), 'error')));
   });
 </script>
 
@@ -39,6 +48,8 @@
         <main class="min-w-0 flex-1 p-8 wide:px-18 wide:pt-4 wide:pb-18">
           {#if router.route === 'accounts'}
             <Accounts />
+          {:else if router.route === 'plugins'}
+            <Plugins />
           {:else if router.route === 'activity'}
             <Activity />
           {:else if session.accountId === null}
@@ -64,6 +75,7 @@
     </div>
   </div>
   <ConnectDialog />
+  <PluginSlot name="overlay" />
 {/if}
 
 <Toasts />

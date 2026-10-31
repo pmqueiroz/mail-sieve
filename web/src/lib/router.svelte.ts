@@ -1,4 +1,4 @@
-export type Route = 'overview' | 'senders' | 'messages' | 'rules' | 'activity' | 'accounts';
+export type Route = 'overview' | 'senders' | 'messages' | 'rules' | 'activity' | 'accounts' | 'plugins';
 
 export const routes: { route: Route; label: string }[] = [
   { route: 'overview', label: 'Overview' },
@@ -7,6 +7,7 @@ export const routes: { route: Route; label: string }[] = [
   { route: 'rules', label: 'Rules' },
   { route: 'activity', label: 'Activity' },
   { route: 'accounts', label: 'Accounts' },
+  { route: 'plugins', label: 'Plugins' },
 ];
 
 function parse(): { route: Route; params: URLSearchParams } {
