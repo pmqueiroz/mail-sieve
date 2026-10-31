@@ -84,14 +84,35 @@ export interface Totals {
   bytes: number;
 }
 
+export type Category = 'newsletters' | 'notifications' | 'promotions' | 'receipts' | 'social' | 'people';
+
+export interface Overview {
+  total: number;
+  total_bytes: number;
+  unread: number;
+  unread_week: number;
+  list_messages: number;
+  sender_count: number;
+  never_opened: { senders: number; messages: number; bytes: number };
+  freed_week_bytes: number;
+  categories: { category: Category; count: number }[];
+}
+
+export interface PendingLink {
+  from_addr: string;
+  name: string | null;
+  url: string | null;
+  at: number;
+}
+
 export type JobState = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
 
 export interface Job {
   id: number;
   account_id: number | null;
-  kind: 'sync' | 'action';
+  kind: 'sync' | 'action' | 'undo';
   state: JobState;
-  payload: { action?: string; origin?: string };
+  payload: { action?: string; origin?: string; undo_of?: number; undone_by?: number };
   total: number;
   done: number;
   error: string | null;

@@ -1,16 +1,23 @@
-export type Route = 'senders' | 'messages' | 'rules' | 'activity' | 'accounts';
+export type Route = 'overview' | 'senders' | 'messages' | 'rules' | 'activity' | 'accounts';
 
-const routes: Route[] = ['senders', 'messages', 'rules', 'activity', 'accounts'];
+export const routes: { route: Route; label: string }[] = [
+  { route: 'overview', label: 'Overview' },
+  { route: 'senders', label: 'Senders' },
+  { route: 'messages', label: 'Messages' },
+  { route: 'rules', label: 'Rules' },
+  { route: 'activity', label: 'Activity' },
+  { route: 'accounts', label: 'Accounts' },
+];
 
 function parse(): { route: Route; params: URLSearchParams } {
   const hash = window.location.hash.replace(/^#\/?/, '');
   const [path = '', search = ''] = hash.split('?');
-  const route = routes.includes(path as Route) ? (path as Route) : 'senders';
-  return { route, params: new URLSearchParams(search) };
+  const known = routes.find((entry) => entry.route === path);
+  return { route: known?.route ?? 'overview', params: new URLSearchParams(search) };
 }
 
 class Router {
-  route = $state<Route>('senders');
+  route = $state<Route>('overview');
   params = $state(new URLSearchParams());
 
   constructor() {

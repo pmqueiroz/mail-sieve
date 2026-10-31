@@ -12,6 +12,9 @@ class Session {
   jobs = $state<Job[]>([]);
   dataVersion = $state(0);
   current = $derived(this.accounts.find((account) => account.id === this.accountId) ?? null);
+  syncJob = $derived(
+    this.jobs.find((job) => job.kind === 'sync' && job.account_id === this.accountId && (job.state === 'running' || job.state === 'queued')) ?? null,
+  );
   activeJobs = $derived(this.jobs.filter((job) => job.state === 'queued' || job.state === 'running'));
   private events: EventSource | null = null;
   private accountRefresh: ReturnType<typeof setTimeout> | null = null;
@@ -87,7 +90,7 @@ class Session {
     this.dataVersion++;
     this.scheduleAccountRefresh();
     if (job.state === 'failed') toasts.show(`Job #${job.id} failed: ${job.error ?? 'unknown error'}`, 'error', 10000);
-    if (job.state === 'done' && job.kind === 'action') toasts.show(`Done: ${formatNumber(job.done)} messages updated.`, 'success');
+    if (job.state === 'done' && job.kind === 'action' && !toasts.tracks(job.id)) toasts.show(`Done: ${formatNumber(job.done)} messages updated.`, 'success');
   }
 
   private scheduleAccountRefresh() {

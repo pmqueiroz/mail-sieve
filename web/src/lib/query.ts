@@ -17,17 +17,24 @@ export function combine(...parts: (string | null | undefined)[]): string {
 }
 
 export const QUERY_HELP = [
-  ['from:deals@shop.com', 'exact sender'],
-  ['from:*@shop.com', 'wildcard sender'],
-  ['domain:shop.com', 'sender domain and subdomains'],
-  ['subject:invoice', 'subject contains'],
-  ['list:news', 'mailing list id contains'],
-  ['in:inbox', 'folder or Gmail label'],
-  ['is:unread  is:read  is:flagged', 'state'],
-  ['has:unsubscribe  has:list', 'newsletter signals'],
-  ['older_than:1y  newer_than:7d', 'age (h, d, w, m, y)'],
-  ['before:2024-01-01  after:2023-06-01', 'dates'],
-  ['larger:5mb  smaller:100kb', 'size'],
-  ['-from:boss@work.com', 'negate any term'],
-  ['receipt', 'free text over subject and sender'],
+  ['from:*@linkedin.com', 'Any address at a domain'],
+  ['domain:shop.com', 'Same, shorter'],
+  ['subject:invoice', 'Words in the subject'],
+  ['list:news', 'From a mailing list'],
+  ['is:unread', 'Unread only'],
+  ['has:unsubscribe', 'Sender offers unsubscribe'],
+  ['older_than:1y', 'Older than a year (d, m, y)'],
+  ['newer_than:7d', 'From the last week'],
+  ['before:2024-01-01', 'Before a date'],
+  ['larger:5mb', 'Bigger than 5 MB'],
+  ['-from:boss@work.com', 'Minus excludes a match'],
 ] as const;
+
+export function hasTerm(query: string, term: string): boolean {
+  return query.split(/\s+/).includes(term);
+}
+
+export function toggleTerm(query: string, term: string): string {
+  const terms = query.split(/\s+/).filter(Boolean);
+  return (terms.includes(term) ? terms.filter((existing) => existing !== term) : [...terms, term]).join(' ');
+}
