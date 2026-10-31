@@ -2,6 +2,8 @@
   import { api, errorMessage } from '../lib/api';
   import Button from '../lib/components/Button.svelte';
   import Field from '../lib/components/Field.svelte';
+  import Icon from '../lib/components/Icon.svelte';
+  import TextInput from '../lib/components/TextInput.svelte';
   import { session } from '../lib/session.svelte';
 
   let { configured }: { configured: boolean } = $props();
@@ -30,56 +32,25 @@
   }
 </script>
 
-<main class="login">
-  <form class="card" onsubmit={submit}>
-    <div class="brand">
-      <img src="/favicon.svg" alt="" width="36" height="36" />
+<main class="grid min-h-screen place-items-center bg-page p-8">
+  <form class="flex w-[min(--spacing(200),100%)] flex-col gap-8 rounded-4xl bg-surface p-12 shadow-pop" onsubmit={submit}>
+    <div class="flex items-center gap-6">
+      <div class="grid size-18 place-items-center rounded-md bg-btn text-btn-ink"><Icon name="logo" size={20} /></div>
       <div>
-        <h1>mail-sieve</h1>
-        <p class="muted">{configured ? 'Sign in to your mailbox control panel.' : 'Choose an admin password to finish setup.'}</p>
+        <h1 class="m-0 text-xl font-semibold tracking-tight">mail-sieve</h1>
+        <p class="m-0 text-sm text-ink2">{configured ? 'Sign in to your mailbox control panel.' : 'Choose an admin password to finish setup.'}</p>
       </div>
     </div>
     <Field label="Password" hint={configured ? undefined : 'At least 10 characters.'}>
       <!-- svelte-ignore a11y_autofocus -->
-      <input type="password" autocomplete={configured ? 'current-password' : 'new-password'} bind:value={password} autofocus />
+      <TextInput type="password" autocomplete={configured ? 'current-password' : 'new-password'} bind:value={password} autofocus />
     </Field>
     {#if !configured}
       <Field label="Confirm password">
-        <input type="password" autocomplete="new-password" bind:value={confirmation} />
+        <TextInput type="password" autocomplete="new-password" bind:value={confirmation} />
       </Field>
     {/if}
-    {#if error}<p class="error" role="alert">{error}</p>{/if}
-    <Button variant="primary" type="submit" {busy}>{configured ? 'Sign in' : 'Create admin password'}</Button>
+    {#if error}<p class="m-0 text-bad" role="alert">{error}</p>{/if}
+    <Button size="dialog" variant="primary" type="submit" {busy}>{configured ? 'Sign in' : 'Create admin password'}</Button>
   </form>
 </main>
-
-<style>
-  .login {
-    min-height: 100%;
-    display: grid;
-    place-items: center;
-    padding: var(--space-4);
-  }
-  form {
-    width: min(400px, 100%);
-    padding: var(--space-6);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
-  .brand {
-    display: flex;
-    gap: var(--space-3);
-    align-items: center;
-  }
-  h1 {
-    margin: 0;
-    font-size: var(--text-xl);
-  }
-  p {
-    margin: 0;
-  }
-  .error {
-    color: var(--color-danger);
-  }
-</style>
