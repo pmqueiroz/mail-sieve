@@ -14,6 +14,7 @@ use crate::error::{Error, Result};
 use crate::state::AppState;
 
 const MAX_PREVIEW_CHARS: usize = 50_000;
+const UNSUBSCRIBE_GRACE_SECONDS: i64 = 2 * 86_400;
 
 fn parse_query(raw: Option<&str>) -> Result<Query> {
     Ok(Query::parse(raw.unwrap_or_default())?)
@@ -289,6 +290,20 @@ pub async fn pending_unsubscribes(
     Ok(Json(
         state
             .read(move |c| mail_sieve_store::unsubscribes::pending_links(c, id))
+            .await?,
+    ))
+}
+
+pub async fn still_sending(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<Vec<mail_sieve_store::unsubscribes::StillSending>>> {
+    accounts::load(&state, id).await?;
+    Ok(Json(
+        state
+            .read(move |c| {
+                mail_sieve_store::unsubscribes::still_sending(c, id, UNSUBSCRIBE_GRACE_SECONDS)
+            })
             .await?,
     ))
 }

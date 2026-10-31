@@ -49,6 +49,10 @@ pub fn router(state: AppState) -> Router {
             post(mail::finish_unsubscribe),
         )
         .route(
+            "/accounts/{id}/unsubscribes/still-sending",
+            get(mail::still_sending),
+        )
+        .route(
             "/accounts/{id}/pins",
             get(pins::list).post(pins::add).delete(pins::remove),
         )
