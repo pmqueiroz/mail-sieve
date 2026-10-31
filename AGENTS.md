@@ -10,6 +10,9 @@ explain the *why* and the gotchas.
 - [architecture.md](./.refs/architecture.md) — why browser + Rust, IMAP
   performance strategy, crate layout, data model, query DSL, providers
   (Gmail vs generic), jobs, rules, IDLE, web UI, known gaps.
+- [design-system.md](./.refs/design-system.md) — Tailwind tokens (2px
+  spacing unit), the content-box gotcha, shared components, deviations from
+  the design handoff. **Read before touching the web UI.**
 - [ci-cd.md](./.refs/ci-cd.md) — CI/CD pipeline: jobs, toolchain pin, what's
   not set up yet.
 - [security.md](./.refs/security.md) — credential vault, admin sessions,

@@ -48,6 +48,10 @@ are unaffected by it.
   without `untrack` the effect subscribes to it and reloads forever, which
   also wipes the selection on every load.
 - Any server JSON used in the UI is typed in `src/lib/types.ts`.
+- Styling is Tailwind utilities only: no `<style>` blocks, no raw px or hex
+  in class names. Sizes come from the 2px spacing unit (`--spacing(n)` in
+  arbitrary values), colors and type from the `@theme` tokens. See
+  [design-system.md](./design-system.md).
 
 ## Documentation lives in `.refs/`
 

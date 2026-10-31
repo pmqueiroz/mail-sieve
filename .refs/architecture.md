@@ -220,15 +220,21 @@ follow-up action (archive or trash, never delete) is enqueued for
 
 - `src/lib/session.svelte.ts`: auth status, accounts, jobs, SSE
   connection. Bumps `dataVersion` when jobs finish so views reload.
-- `src/lib/router.svelte.ts`: hash router (`#/senders`, `#/messages?q=`,
-  `#/rules`, `#/activity`, `#/accounts`).
-- Shared components in `src/lib/components`: `VirtualList` (fixed row
-  height, overscan, end-reached paging), `QueryBar` (debounced query with
-  live count and syntax help), `ActionBar` + `BulkActions` (one action
-  vocabulary everywhere), `UnsubscribeDialog`, `Modal`, `ConfirmDialog`,
-  `Button`, `Badge`, `Field`, `Segmented`, `ProgressBar`, `Toasts`.
-- Design tokens live in `src/app.css` as CSS variables with a dark scheme
-  via `prefers-color-scheme`; components never hardcode colors.
+- `src/lib/router.svelte.ts`: hash router (`#/overview`, `#/senders?q=&select=`,
+  `#/messages?q=`, `#/rules`, `#/activity`, `#/accounts`). `select`
+  preselects one sender, used by Overview "Review" and the preview's "All
+  from this sender".
+- Layout: a sticky icon rail (`NavRail`) and `TopBar` (title, sync pill,
+  Sync now, account menu); below 760px the rail becomes a chip row. The
+  page itself scrolls; `VirtualList` virtualizes against the window scroll
+  position (rAF-throttled, passive listeners), so tables with tens of
+  thousands of rows render only what is visible.
+- Bulk actions go through `lib/actions.ts::runAction`, which posts the
+  action and hands the job to a job toast; the toast follows the job over
+  SSE and offers Cancel, then Undo (`POST /jobs/{id}/undo`).
+- Overview reads `/overview` plus the top five sender groups. Inbox mix
+  petals link to `category:` searches.
+- Styling, tokens and components: see [design-system.md](./design-system.md).
 - Message previews render `text/plain` (or text extracted from HTML) inside
   a `<pre>`; HTML is never injected.
 
