@@ -28,7 +28,7 @@ docker build -t mail-sieve .
 docker run -d --name mail-sieve -p 127.0.0.1:8080:8080 -v mail-sieve-data:/data mail-sieve
 ```
 
-Or with compose: `docker compose -f docker/compose.yml up -d`.
+Or with compose: `docker compose -f docker/compose.yml up -d` (set `MAIL_SIEVE_PORT` to use a host port other than 8080).
 
 Open http://localhost:8080, choose an admin password, then add an account.
 

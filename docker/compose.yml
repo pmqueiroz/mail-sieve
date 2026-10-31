@@ -4,11 +4,11 @@ services:
     image: mail-sieve:latest
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${MAIL_SIEVE_PORT:-8080}:8080"
     volumes:
       - mail-sieve-data:/data
     environment:
-      MAIL_SIEVE_PUBLIC_URL: "http://localhost:8080"
+      MAIL_SIEVE_PUBLIC_URL: "${MAIL_SIEVE_PUBLIC_URL:-http://localhost:${MAIL_SIEVE_PORT:-8080}}"
 
 volumes:
   mail-sieve-data:
