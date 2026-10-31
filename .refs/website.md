@@ -99,9 +99,11 @@ GitHub" links to the file on `main`.
 Supported syntax: headings, paragraphs, lists, fenced code, inline code,
 links and GFM tables. Two-column tables render as the design's key/value
 rows (the header row is visually hidden but kept for screen readers).
-Custom components use container directives:
+Custom components use directives:
 
 ```md
+Text with the :mailsieve wordmark inline.
+
 :::note
 Shown as the purple note box.
 :::
@@ -116,7 +118,13 @@ plugins do not apply. Directives are enabled with
 `features: { directive: true }` and turned into `<aside class="callout
 callout-*">` by the Sätteri mdast plugin in `src/plugins/callouts.ts`. To
 add a callout kind, add its name there and a `.callout-<name>` rule in
-`global.css`. Syntax highlighting is off on purpose: the design shows
+`global.css`. The `:mailsieve` text directive becomes the wordmark span
+(`src/plugins/brand.ts`, same classes as `components/Brand.astro`); use it
+for every mention of the product in docs prose and headings. Frontmatter is
+plain text: `description` writes plain "mailsieve", while `lead` and the
+group names are rendered through `BrandText.astro`, which swaps "mailsieve"
+for the wordmark. Code blocks keep `mail-sieve` where it is the binary,
+image or volume name (see [conventions.md](./conventions.md)). Syntax highlighting is off on purpose: the design shows
 monochrome code and Shiki would add inline styles to every token.
 
 Markdown typography lives in the `.doc` component layer of

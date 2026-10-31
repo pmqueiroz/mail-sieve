@@ -66,6 +66,12 @@ One concept, one component (`web/src/lib/components`):
   confirmation), `Toasts` (message toasts plus job toasts with progress,
   Cancel and Undo), `UnsubscribeDialog`, `ConnectDialog`, `GuideModal`,
   `NavRail`, `TopBar`.
+- `Brand` (the inline wordmark: "mail" inherits the text color, "sieve" is
+  bold `text-ink`) and `BrandText` (renders a plain string with every
+  "mailsieve" swapped for `Brand`). `ConfirmDialog` messages,
+  `EmptyState` titles and `GuideModal` text go through `BrandText`, so
+  strings in `guides.ts` and dialog props just write "mailsieve". The
+  Login logo keeps its own larger wordmark.
 
 ## Deliberate deviations from the mock
 

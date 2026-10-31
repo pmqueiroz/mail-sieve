@@ -26,7 +26,17 @@ whichever of period, comma, or colon actually fits. A middle dot (`·`)
 separates metadata in compact rows. Destructive actions say exactly what
 happens and where ("removes 1,234 messages from the server").
 
-This is a copy rule, not a prose rule: `.refs/` docs and commit messages
+The product name is **mailsieve**, written as the wordmark: "mail" in the
+surrounding text, "sieve" bold in `text-ink`. `mail-sieve` with a dash is
+the repo-level identifier only: the GitHub repo, the binary and CLI
+commands, the cargo package, the image, container and volume names, env
+vars (`MAIL_SIEVE_*`) and storage keys. Never use it in prose. Where markup
+is allowed, render the name through the brand component (`Brand` /
+`BrandText` in the app and on the site, `:mailsieve` in docs Markdown);
+where it is not (page titles, meta tags, alt text, aria labels, JSON-LD,
+the manifest), write plain `mailsieve`.
+
+These are copy rules, not prose rules: `.refs/` docs and commit messages
 are unaffected by it.
 
 ## Rust
