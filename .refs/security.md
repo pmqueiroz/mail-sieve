@@ -39,6 +39,8 @@ bulk. These are the decisions that protect that, and the reasons.
   confirmation dialog in the UI. An empty query (every message) also
   requires `confirm`.
 - Rules cannot permanently delete. Unsubscribe follow-ups cannot either.
+  Imported rule files go through the same validation, so a YAML file can
+  never introduce a permanent-delete rule.
 - Before writing, the action engine checks UIDVALIDITY against the index
   and refuses on mismatch, so stale UIDs never hit the wrong messages.
 

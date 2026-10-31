@@ -200,6 +200,20 @@ undo twice.
 
 - Rules are saved query + action, run after each sync and/or every N
   minutes. They cannot use `delete` and cannot have an empty query.
+- Rules export and import as YAML per account
+  (`server/src/rules_file.rs`): `GET /accounts/{id}/rules/export` (also
+  `mail-sieve rules export`) and `POST /accounts/{id}/rules/import` with
+  `{ yaml, on_conflict: skip|replace, apply }` (also `mail-sieve rules
+  import`). Per account, not global, because `move:` folder names are
+  account specific. A top-level `version` (currently 1) is required and
+  any other version is refused, so the format can change later. Each entry
+  is parsed and run through the same `rules::validate` as the API on its
+  own (`deny_unknown_fields`, so a typo is an error, not a silent default),
+  and a bad entry lands in `invalid` instead of failing the whole file.
+  Names are the identity: a name that already exists on the account is
+  `existing` and is skipped or updated in place; a name repeated within the
+  file is invalid. Without `apply` the same report is a preview and nothing
+  is written; with it, inserts and replacements run in one transaction.
 - The scheduler ticks every 60 s: enqueue due syncs, run due rules,
   reconcile IDLE watchers, purge expired sessions, prune finished jobs
   older than 30 days.
