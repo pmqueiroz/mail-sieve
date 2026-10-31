@@ -1,0 +1,68 @@
+---
+import { render } from 'astro:content';
+import DocPager from '../../components/docs/DocPager.astro';
+import DocsNav from '../../components/docs/DocsNav.astro';
+import Base from '../../layouts/Base.astro';
+import { getDocs, type Doc } from '../../lib/docs';
+import { docHref, href } from '../../lib/paths';
+import { links, site } from '../../lib/site';
+
+export async function getStaticPaths() {
+  const docs = await getDocs();
+  return docs.map((doc, index) => ({
+    params: { slug: doc.id },
+    props: { doc, docs, prev: docs[index - 1], next: docs[index + 1] },
+  }));
+}
+
+interface Props {
+  doc: Doc;
+  docs: Doc[];
+  prev?: Doc;
+  next?: Doc;
+}
+
+const { doc, docs, prev, next } = Astro.props;
+const { Content } = await render(doc);
+const absolute = (path: string) => new URL(path, Astro.site).toString();
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'TechArticle',
+    headline: doc.data.title,
+    description: doc.data.description,
+    url: absolute(docHref(doc.id)),
+    isPartOf: { '@type': 'WebSite', name: site.name, url: absolute(href('/')) },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: site.name, item: absolute(href('/')) },
+      { '@type': 'ListItem', position: 2, name: 'Docs', item: absolute(href('/docs/intro/')) },
+      { '@type': 'ListItem', position: 3, name: doc.data.title, item: absolute(docHref(doc.id)) },
+    ],
+  },
+];
+---
+
+<Base title={`${doc.data.title} · mail-sieve docs`} description={doc.data.description} section="docs" type="article" jsonLd={jsonLd}>
+  <main class="mx-auto flex max-w-page flex-col px-12 wide:flex-row wide:gap-28">
+    <DocsNav docs={docs} current={doc.id} />
+    <article class="flex max-w-article min-w-0 flex-1 flex-col pt-14 pb-48 wide:pt-24">
+      <header class="mb-13 flex flex-col gap-9">
+        <div class="font-mono text-xs text-accent">{doc.data.group}</div>
+        <h1 class="m-0 text-doc-title leading-heading font-bold tracking-display text-balance">{doc.data.title}</h1>
+        <p class="m-0 text-lg text-pretty text-ink-2">{doc.data.lead}</p>
+      </header>
+      <div class="doc">
+        <Content />
+      </div>
+      <DocPager prev={prev} next={next} />
+      <a href={`${links.docsSource}/${doc.filePath?.split('/').pop()}`} target="_blank" rel="noopener" class="mt-9 self-start text-sm text-ink-2">
+        Edit this page on GitHub
+      </a>
+    </article>
+  </main>
+</Base>

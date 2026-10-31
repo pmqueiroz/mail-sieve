@@ -1,0 +1,45 @@
+---
+import { groupDocs, type Doc } from '../../lib/docs';
+import { docHref } from '../../lib/paths';
+
+interface Props {
+  docs: Doc[];
+  current: string;
+}
+
+const { docs, current } = Astro.props;
+const groups = groupDocs(docs);
+const state = (id: string) => (id === current ? 'bg-raised font-semibold text-ink' : 'font-medium text-ink-2');
+---
+
+<nav aria-label="Documentation" class="hidden w-110 flex-none self-start wide:sticky wide:top-32 wide:flex wide:max-h-[calc(100vh-var(--spacing)*32)] wide:flex-col wide:gap-12 wide:overflow-auto wide:py-20">
+  {groups.map((group) => (
+    <div class="flex flex-col gap-1">
+      <div class="px-6 pb-4 font-mono text-label tracking-label text-ink-3 uppercase">{group.name}</div>
+      {group.items.map((doc) => (
+        <a
+          href={docHref(doc.id)}
+          aria-current={doc.id === current ? 'page' : undefined}
+          class:list={['rounded-sm px-6 py-3.5 text-base no-underline hover:bg-surface hover:text-ink', state(doc.id)]}
+        >
+          {doc.data.title}
+        </a>
+      ))}
+    </div>
+  ))}
+</nav>
+
+<nav aria-label="Documentation" class="scrollbar-none -mx-12 flex gap-4 overflow-x-auto border-b border-hairline px-12 py-8 wide:hidden">
+  {docs.map((doc) => (
+    <a
+      href={docHref(doc.id)}
+      aria-current={doc.id === current ? 'page' : undefined}
+      class:list={[
+        'flex-none rounded-full border border-line px-6 py-3 text-sm font-semibold no-underline hover:text-ink',
+        doc.id === current ? 'bg-raised text-ink' : 'text-ink-2',
+      ]}
+    >
+      {doc.data.title}
+    </a>
+  ))}
+</nav>

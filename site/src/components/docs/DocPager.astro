@@ -1,0 +1,27 @@
+---
+import type { Doc } from '../../lib/docs';
+import { docHref } from '../../lib/paths';
+
+interface Props {
+  prev?: Doc;
+  next?: Doc;
+}
+
+const { prev, next } = Astro.props;
+const card = 'flex min-w-100 flex-1 flex-col gap-1 rounded-xl border border-line px-9 py-7 no-underline hover:border-accent';
+---
+
+<nav aria-label="Pagination" class="mt-20 flex flex-wrap gap-6">
+  {prev && (
+    <a href={docHref(prev.id)} rel="prev" class={card}>
+      <span class="text-xs text-ink-3">Previous</span>
+      <span class="font-semibold text-ink">{prev.data.title}</span>
+    </a>
+  )}
+  {next && (
+    <a href={docHref(next.id)} rel="next" class:list={[card, 'text-right']}>
+      <span class="text-xs text-ink-3">Next</span>
+      <span class="font-semibold text-ink">{next.data.title}</span>
+    </a>
+  )}
+</nav>
