@@ -1,7 +1,8 @@
 # Design system
 
 The web UI implements the Claude Design handoff "Mail Sieve" (`Mail
-Sieve.dc.html`) and its `Login.dc.html` for sign-in. Tailwind v4 is the only styling layer; every value comes
+Sieve.dc.html`), its `Login.dc.html` for sign-in and `Wingman Ghoul.dc.html`
+for the wingman plugin. Tailwind v4 is the only styling layer; every value comes
 from the `@theme` block in `web/src/app.css`.
 
 ## Tokens
@@ -28,6 +29,16 @@ from the `@theme` block in `web/src/app.css`.
   `bg-sieve` (the coral/amber/mint gradient), `bg-sieve-bloom`,
   `bg-ticks` (the striped never-opened track) and `border-check` (the
   1.5px checkbox/radio stroke).
+- **Wingman tokens**: `ghoul-hi body shade stroke eye accent alert
+  ground` colors (the design's "mist" tint; `ground` and the
+  `drop-shadow-ghoul` glow have dark values), and the `animate-ghoul-*`,
+  `animate-balloon-pop|fade` and `animate-countdown` animations with their
+  `@keyframes` inside `@theme`. Every animated wingman element also carries
+  `motion-reduce:animate-none`. SVG fills and strokes use `fill-*` /
+  `stroke-*` utilities and gradient stops `[stop-color:var(...)]`, so no
+  hex lives in markup. SVG transform origins use
+  `[transform-box:fill-box]` plus `origin-left|right|center` instead of the
+  design's pixel origins.
 - **Fonts** are Plus Jakarta Sans and JetBrains Mono from `@fontsource`,
   Latin subset and only the used weights. They are bundled because the CSP
   is `default-src 'self'`; Google Fonts would be blocked.
@@ -67,6 +78,15 @@ One concept, one component (`web/src/lib/components`):
   `PinnedConfirm` (the "Act on a pinned sender?" confirmation, a
   `ConfirmDialog` with the action as its label). `BulkBar` takes a
   `skipped` count and appends "N from pinned senders are skipped".
+- Plugins: `PluginSlot` / `MountSlot` (`lib/plugins/`) render plugin
+  content; the wingman's `Ghoul` and `Balloon` live with the plugin in
+  `src/plugins/wingman/` because nothing else uses them. The Plugins page
+  has Core and Community sections, each a card grid like Accounts with a
+  `Checkbox` per plugin and a Configure `Button`; an empty section is an
+  `EmptyState` inside a dashed card. Configure opens the shared `Modal`
+  (wide) with the plugin's own content. The wingman form wraps each
+  `Segmented` in a `flex` row so it sizes to its options instead of
+  stretching in the column.
 - `QueryBar` (search pill, live count, syntax popover), `BulkBar` (floating
   action bar with More menu, folder submenu and the permanent-delete
   confirmation), `Toasts` (message toasts plus job toasts with progress,
@@ -99,6 +119,17 @@ One concept, one component (`web/src/lib/components`):
   two-column grid overlaps the Review buttons.
 - The Messages page reuses `BulkBar` (the mock only shows it on Senders),
   and Activity offers Undo on finished actions in addition to the toast.
+- Wingman: the design's live demo is the only placement reference, so the
+  ghoul sits fixed 28px/22px from the bottom-right corner of the window
+  with balloons offset exactly as in the mock, and it is hidden below
+  `wide`. The demo's "Delete 412" says "Trash 412" (the copy rule:
+  destructive actions say what happens, and the done text already said
+  "moved to trash"). The "Reconnect" heads-up is "Sync now", the only
+  thing the app can actually do there. "Reading N new headers" became the
+  sync percentage, the figure jobs report. The 1c "Choice" balloon
+  (archive / delete / keep plus "Save as a rule") and the "Tip" balloon are
+  not built yet; the newsletter suggestion uses the plain two-button
+  balloon instead. The tint options (`lavender`, `ink`) are not exposed.
 - Copy that the mock fills with sample data (rule sentences, last-run
   summaries, job subtitles) is generated from real data in
   `lib/describe.ts` and `routes/Activity.svelte`.

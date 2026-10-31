@@ -21,6 +21,8 @@ explain the *why* and the gotchas.
 - [security.md](./.refs/security.md) — credential vault, admin sessions,
   destructive-action guards, unsubscribe SSRF guard, web headers. **Read
   before touching auth, actions or unsubscribe.**
+- [plugins.md](./.refs/plugins.md) — plugin system (core and community
+  plugins, slots, host API, server endpoints) and the ghoul wingman.
 - [incidents/](./.refs/incidents/README.md) — postmortems + standing rules;
   **read before any migration or destructive op**.
 

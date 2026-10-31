@@ -72,6 +72,35 @@ fetched by the server.
   rendered, so remote images and scripts cannot run or track.
 - Bodies are fetched with `BODY.PEEK[]` and never stored.
 
+## Plugins
+
+- Community plugins run as same-origin ES modules inside the signed-in
+  app, so they can do anything the admin can. The trust boundary is the
+  filesystem: only someone who can write to `<data dir>/plugins/` can add
+  one, and each is off until enabled on the Plugins page, which warns
+  about it. Core plugins are part of the build.
+- Plugin files are served only to authenticated sessions
+  (`/api/plugins/{id}/files/...`). The id must match
+  `[a-z0-9][a-z0-9-]{0,63}`; the path must be plain `Normal` components
+  (no `..`, no root), and the canonicalized file must still be inside the
+  canonicalized plugin folder, so symlinks cannot escape it either.
+- Plugin secrets (AI API keys) are sealed with the same vault key as
+  mailbox credentials and stored apart from the plain settings. The API
+  returns only their names. The wingman form drops a saved key when the
+  provider or base URL changes, so a stored key is not replayed against
+  a new endpoint.
+- `POST /api/ai/models` makes the server request an admin-supplied URL.
+  That is the point (local Ollama or Model Runner lives on private
+  addresses), so unlike the unsubscribe guard it does not block private
+  ranges. It is behind the session, only issues a GET, rejects non-http(s)
+  schemes and URLs with credentials, times out after 10 s, and returns
+  only parsed model ids or a short error, never the raw body.
+- The CSP is unchanged: modules come from `'self'`, so no inline script or
+  remote origin is needed.
+- Plugins act through the public API, so every destructive-operation guard
+  above (confirm, pins, rule validation) applies to them as well. The
+  wingman only trashes, starts syncs and creates archive rules.
+
 ## Transport
 
 - IMAP uses implicit TLS with the Mozilla root store compiled in

@@ -57,7 +57,9 @@ Cargo workspace producing one binary, plus a Svelte SPA embedded into it.
   over SMTP, link fallback).
 - `crates/server` (binary `mail-sieve`): config, credential vault, account
   service, sync and action engines, job runner, rules, scheduler, IDLE
-  watchers, OAuth, axum API, embedded assets, CLI.
+  watchers, OAuth, plugin state, config and community plugin files, AI
+  provider connection test (`ai.rs`), axum API,
+  embedded assets, CLI.
 - `web/`: Svelte 5 + Vite + TypeScript SPA, built to `web/dist` and embedded
   with `rust-embed`. `build.rs` writes a placeholder `index.html` when the
   UI was not built, so `cargo build` always works.
@@ -277,7 +279,7 @@ follow-up action (archive or trash, never delete) is enqueued for
 - `src/lib/session.svelte.ts`: auth status, accounts, jobs, SSE
   connection. Bumps `dataVersion` when jobs finish so views reload.
 - `src/lib/router.svelte.ts`: hash router (`#/overview`, `#/senders?q=&select=`,
-  `#/messages?q=`, `#/rules`, `#/activity`, `#/accounts`). `select`
+  `#/messages?q=`, `#/rules`, `#/activity`, `#/accounts`, `#/plugins`). `select`
   preselects one sender, used by Overview "Review" and the preview's "All
   from this sender".
 - Layout: a sticky icon rail (`NavRail`) and `TopBar` (title, sync pill,
@@ -291,6 +293,9 @@ follow-up action (archive or trash, never delete) is enqueued for
 - Overview reads `/overview` plus the top five sender groups. Inbox mix
   petals link to `category:` searches.
 - Styling, tokens and components: see [design-system.md](./design-system.md).
+- Plugins: `lib/plugins/` is the host (registry, slots, host API) and
+  `src/plugins/` holds the core plugins, the first being the ghoul
+  wingman. See [plugins.md](./plugins.md).
 - Message previews render `text/plain` (or text extracted from HTML) inside
   a `<pre>`; HTML is never injected.
 
