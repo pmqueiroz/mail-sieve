@@ -1,5 +1,6 @@
 mod action;
 mod flags;
+pub mod headers;
 mod message;
 pub mod query;
 mod uid_set;
