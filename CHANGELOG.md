@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.3](https://github.com/pmqueiroz/mail-sieve/compare/v0.1.2...v0.1.3) (2026-10-31)
+
+
+### Features
+
+* **server:** read the avatar from community plugin manifests ([32ddaf7](https://github.com/pmqueiroz/mail-sieve/commit/32ddaf7fbbd14ecc1ec36cb160a0baf5f9e7ff26))
+* **web:** animate the ghoul shrinking when it naps ([d3deda7](https://github.com/pmqueiroz/mail-sieve/commit/d3deda7ba6f996bd921244cbf1511f826015584e))
+* **web:** drop the core plugins section note ([ca89bde](https://github.com/pmqueiroz/mail-sieve/commit/ca89bde7a3e4b14d219f6c5a679e2c427e7ae703))
+* **web:** drop the wingman napping tip ([58ac396](https://github.com/pmqueiroz/mail-sieve/commit/58ac39602ef61501939fd19f194356a0e881856a))
+* **web:** scale buttons down while pressed ([f744d8d](https://github.com/pmqueiroz/mail-sieve/commit/f744d8d371c18d218525ecca4d28f173ed491624))
+* **web:** show an icon and color avatar on plugin cards ([fd98dfe](https://github.com/pmqueiroz/mail-sieve/commit/fd98dfeba15d71de9b9a85296eabc1084a2d54dc))
+* **web:** slide the segmented control thumb between options ([6e1d9c5](https://github.com/pmqueiroz/mail-sieve/commit/6e1d9c5659c0a8ba91df956ac31390b563591b0c))
+
 ## [0.1.2](https://github.com/pmqueiroz/mail-sieve/compare/v0.1.1...v0.1.2) (2026-10-31)
 
 
