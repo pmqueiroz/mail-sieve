@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+          retention-days: 3
+
+  rust:
+    needs: web
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+      MAIL_SIEVE_TEST_IMAP: 127.0.0.1:3143
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Start Dovecot
+        run: |
+          docker run -d --name dovecot -p 127.0.0.1:3143:143 \
+            -v "$GITHUB_WORKSPACE/docker/dovecot/dovecot.conf:/etc/dovecot/dovecot.conf:ro" \
+            dovecot/dovecot:2.3-latest
+          for attempt in $(seq 1 30); do
+            if (exec 3<>/dev/tcp/127.0.0.1/3143) 2>/dev/null; then exit 0; fi
+            sleep 1
+          done
+          docker logs dovecot
+          exit 1
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+
+  docker:
+    needs: rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: mail-sieve:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
