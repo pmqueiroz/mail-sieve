@@ -26,7 +26,9 @@ and every existing guard (pins, `confirm`, rule validation) still applies.
   remounted.
 - `web/src/plugins/index.ts`: `CORE_PLUGINS`, the list of built-in plugins.
   A core plugin adds `id`, `name`, `description`, `version` and
-  `defaultEnabled`.
+  `defaultEnabled`. Every core plugin ships with `defaultEnabled: false`:
+  plugins are opt-in, so a fresh install shows only the core app and the
+  user turns on what they want on the Plugins page.
 - `registry.svelte.ts` (`plugins`): loads `GET /api/plugins` once after
   sign-in (`App.svelte`), merges core and community entries (a community
   folder with a core id is ignored), imports enabled community modules with
@@ -209,7 +211,7 @@ handling and copy exist once.
 
 ## Undo history (`web/src/plugins/undo-history/`)
 
-`topbar` slot, on by default, hidden below `wide`. A Button with the
+`topbar` slot, hidden below `wide`. A Button with the
 count of undoable jobs opens a `Popover` listing the newest 8 from
 `session.jobs` (`isUndoable` in `lib/jobs.ts`, the same test Activity
 uses: finished actions that are not permanent deletes, not undos and not
@@ -219,7 +221,7 @@ job's `undone_by`, so undone ids are hidden locally.
 
 ## Weekly digest (`web/src/plugins/digest/`)
 
-`overview` slot, on by default. A "This week" row built from existing
+`overview` slot. A "This week" row built from existing
 endpoints, reloaded on `dataVersion`: arrived (`/count` for
 `newer_than:7d`, plus its unread share), cleaned up (finished action
 jobs of the account in the last 7 days from `session.jobs`, which holds
@@ -230,7 +232,7 @@ of the week, each opening Senders preselected.
 
 ## Rule recipes (`web/src/plugins/rule-recipes/`)
 
-`rules` slot, on by default. Six fixed recipes (`recipes.ts`), each a
+`rules` slot. Six fixed recipes (`recipes.ts`), each a
 card with the rule sentence from `describeRule`, a live match count
 (`liveTotals`, with the pinned note) and Add rule, which creates the
 rule with `run_after_sync` and calls `reload`. A recipe disappears once
@@ -239,7 +241,7 @@ disappears with the last one. Rules skip pinned senders on their own.
 
 ## Query builder (`web/src/plugins/query-builder/`)
 
-`search` slot, on by default. Splits the query with `splitTerms` /
+`search` slot. Splits the query with `splitTerms` /
 `parseTerm` (`lib/query.ts`, quote aware, also used by `describeRule`)
 and shows one chip per term: clicking the chip toggles its `-`, the ×
 removes it, and `+ Filter` opens a `Popover` with a field picker
@@ -250,7 +252,7 @@ the list endpoints take a single query.
 
 ## Unsubscribe audit (`web/src/plugins/unsubscribe-audit/`)
 
-`activity` slot, on by default. Shows the still-sending list with View
+`activity` slot. Shows the still-sending list with View
 (Messages for that sender) and "Trash after every sync", which creates a
 `trash` rule on `from:<addr>` with `run_after_sync`; the button becomes
 "Trash rule active" when a rule already contains that term. Dismiss
@@ -260,7 +262,7 @@ of the same sender shows again.
 
 ## AI categorizer (`web/src/plugins/ai-categorizer/`)
 
-`overview` slot plus `configure`, off by default because it needs a
+`overview` slot plus `configure`. It needs a
 model and sends headers to it. Settings (`settings.ts`) are `AiSettings`
 (modes `cloud` and `docker` only) plus `categories`, a comma-separated
 string (parsed by `categoryList`, which always appends `Other`), and
@@ -281,7 +283,7 @@ union of `from:` terms (pinned senders skipped as usual).
 
 ## Shared blocklists (`web/src/plugins/blocklists/`)
 
-`rules` slot, off by default. The section stores list URLs in the
+`rules` slot. The section stores list URLs in the
 plugin config (`{ lists: [{ url }] }`); Add and check saves the URL and
 calls the preview endpoint. `Matches.svelte` lists the matched entries
 with checkboxes (all on) and three actions over the checked ones: Trash
