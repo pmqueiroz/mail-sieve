@@ -156,6 +156,17 @@ pub fn local_uids(conn: &Connection, mailbox_id: i64) -> Result<Vec<u32>> {
     Ok(uids)
 }
 
+pub fn domain_counts(conn: &Connection, account_id: i64) -> Result<Vec<(String, i64)>> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT from_domain, COUNT(*) FROM messages WHERE account_id = ?1 AND from_domain != '' \
+         GROUP BY from_domain",
+    )?;
+    let counts = stmt
+        .query_map([account_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(counts)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -362,5 +373,35 @@ mod tests {
                 Ok(())
             })
             .unwrap();
+    }
+
+    #[test]
+    fn counts_messages_per_sender_domain() {
+        let store = test_support::store();
+        let account = test_support::account(&store);
+        let inbox = test_support::mailbox(&store, account, "INBOX");
+        store
+            .write(|tx| {
+                upsert_batch(
+                    tx,
+                    account,
+                    inbox,
+                    &[
+                        meta(1, "a@News.com", Flags::default(), 10),
+                        meta(2, "b@news.com", Flags::default(), 10),
+                        meta(3, "c@mail.shop.com", Flags::default(), 10),
+                    ],
+                )
+            })
+            .unwrap();
+        let mut counts = store.read(|c| domain_counts(c, account)).unwrap();
+        counts.sort();
+        assert_eq!(
+            counts,
+            [
+                ("mail.shop.com".to_string(), 1),
+                ("news.com".to_string(), 2)
+            ]
+        );
     }
 }

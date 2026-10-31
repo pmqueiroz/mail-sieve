@@ -1,5 +1,6 @@
 mod accounts;
 mod auth;
+mod blocklists;
 mod jobs;
 mod mail;
 mod oauth;
@@ -55,6 +56,10 @@ pub fn router(state: AppState) -> Router {
         .route(
             "/accounts/{id}/pins",
             get(pins::list).post(pins::add).delete(pins::remove),
+        )
+        .route(
+            "/accounts/{id}/blocklists/preview",
+            post(blocklists::preview),
         )
         .route("/messages/{id}/preview", get(mail::preview))
         .route("/jobs", get(jobs::list))
