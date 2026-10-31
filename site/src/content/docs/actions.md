@@ -2,7 +2,7 @@
 title: Bulk actions
 description: Archive, trash, mark, flag, move or permanently delete thousands of messages, and undo moves.
 lead: Every action shows how many messages it will touch before it runs.
-group: Using mail-sieve
+group: Using mailsieve
 order: 3
 ---
 

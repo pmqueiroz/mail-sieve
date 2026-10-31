@@ -1,6 +1,6 @@
 ---
 title: Configuration
-description: Every mail-sieve environment variable, its default and what it does.
+description: Every mailsieve environment variable, its default and what it does.
 lead: Every option is an environment variable, or the matching command-line flag.
 group: Reference
 order: 1

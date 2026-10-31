@@ -1,8 +1,8 @@
 ---
 title: Search syntax
-description: Every mail-sieve search filter, from sender and age to size, state and category.
+description: Every mailsieve search filter, from sender and age to size, state and category.
 lead: Filters combine with AND. Prefix any filter with a minus to negate it.
-group: Using mail-sieve
+group: Using mailsieve
 order: 2
 ---
 

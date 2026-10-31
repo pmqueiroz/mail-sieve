@@ -1,7 +1,7 @@
 ---
 title: Introduction
-description: What mail-sieve is, what it is not, and what you need to run it.
-lead: mail-sieve is a self-hosted web app for bulk-cleaning IMAP mailboxes by sender.
+description: What mailsieve is, what it is not, and what you need to run it.
+lead: mailsieve is a self-hosted web app for bulk-cleaning IMAP mailboxes by sender.
 group: Getting started
 order: 1
 ---

@@ -1,6 +1,7 @@
 ---
 import { Picture } from 'astro:assets';
 import demo from '../../assets/demo.png';
+import Brand from '../Brand.astro';
 import CopyButton from '../CopyButton.astro';
 import PillLink from '../PillLink.astro';
 import { href } from '../../lib/paths';
@@ -13,7 +14,7 @@ import { installCommand, links } from '../../lib/site';
       Clean out years of email in an afternoon.
     </h1>
     <p class="m-0 max-w-lead text-hero-lead leading-lead text-pretty text-ink-2">
-      <span>mail<b class="text-ink">sieve</b></span> groups every message by sender, then lets you archive, trash or unsubscribe from thousands at once. It
+      <Brand /> groups every message by sender, then lets you archive, trash or unsubscribe from thousands at once. It
       runs on your own machine, so your mail never passes through anyone else's server.
     </p>
     <div class="flex flex-wrap items-center gap-6">

@@ -2,7 +2,7 @@
 title: Rules
 description: Save a search and an action as a rule that runs after every sync or on a timer.
 lead: A rule is a saved search plus an action plus a schedule.
-group: Using mail-sieve
+group: Using mailsieve
 order: 4
 ---
 

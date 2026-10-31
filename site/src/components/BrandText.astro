@@ -1,0 +1,13 @@
+---
+import Brand from './Brand.astro';
+
+interface Props {
+  text: string;
+}
+
+const parts = Astro.props.text.split('mailsieve');
+---
+
+{parts.map((part, index) => (
+  <Fragment>{index > 0 && <Brand />}{part}</Fragment>
+))}

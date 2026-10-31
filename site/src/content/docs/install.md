@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Run mail-sieve with Docker or Docker Compose, keep the secret key safe, and update.
+description: Run mailsieve with Docker or Docker Compose, keep the secret key safe, and update.
 lead: One container, one volume. Most people are running in a couple of minutes.
 group: Getting started
 order: 2

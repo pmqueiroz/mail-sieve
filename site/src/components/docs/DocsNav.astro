@@ -1,4 +1,5 @@
 ---
+import BrandText from '../BrandText.astro';
 import { groupDocs, type Doc } from '../../lib/docs';
 import { docHref } from '../../lib/paths';
 
@@ -15,7 +16,7 @@ const state = (id: string) => (id === current ? 'bg-raised font-semibold text-in
 <nav aria-label="Documentation" class="hidden w-110 flex-none self-start wide:sticky wide:top-32 wide:flex wide:max-h-[calc(100vh-var(--spacing)*32)] wide:flex-col wide:gap-12 wide:overflow-auto wide:py-20">
   {groups.map((group) => (
     <div class="flex flex-col gap-1">
-      <div class="px-6 pb-4 font-mono text-label tracking-label text-ink-3 uppercase">{group.name}</div>
+      <div class="px-6 pb-4 font-mono text-label tracking-label text-ink-3 uppercase"><BrandText text={group.name} /></div>
       {group.items.map((doc) => (
         <a
           href={docHref(doc.id)}

@@ -2,7 +2,7 @@ import { getCollection, type CollectionEntry } from 'astro:content';
 
 export type Doc = CollectionEntry<'docs'>;
 
-export const DOC_GROUPS = ['Getting started', 'Using mail-sieve', 'Reference', 'Community'] as const;
+export const DOC_GROUPS = ['Getting started', 'Using mailsieve', 'Reference', 'Community'] as const;
 
 export async function getDocs() {
   const docs = await getCollection('docs');

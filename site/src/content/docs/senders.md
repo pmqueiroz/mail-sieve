@@ -2,7 +2,7 @@
 title: Senders view
 description: Rank every sender, domain or mailing list by messages, size, unread count or recency.
 lead: The main screen ranks every sender by message count, unread count and storage used.
-group: Using mail-sieve
+group: Using mailsieve
 order: 1
 ---
 

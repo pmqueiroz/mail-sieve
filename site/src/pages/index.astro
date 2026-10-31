@@ -1,4 +1,5 @@
 ---
+import Brand from '../components/Brand.astro';
 import FeatureCard from '../components/home/FeatureCard.astro';
 import FeatureGrid from '../components/home/FeatureGrid.astro';
 import FeatureRow from '../components/home/FeatureRow.astro';
@@ -43,7 +44,7 @@ const jsonLd = [
     <section class="mx-auto max-w-page px-12 pt-36 pb-16">
       <SectionIntro id="features">
         <Fragment slot="title">Built for the inbox <span class="whitespace-nowrap">with <UnreadCounter /></span> unread.</Fragment>
-        Email clients make you work one message at a time. <span>mail<b class="text-ink">sieve</b></span> works one sender at a time, which is how the
+        Email clients make you work one message at a time. <Brand /> works one sender at a time, which is how the
         clutter arrived in the first place.
       </SectionIntro>
     </section>

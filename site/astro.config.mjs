@@ -2,6 +2,7 @@ import { defineConfig } from 'astro/config';
 import { satteri } from '@astrojs/markdown-satteri';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
+import { brand } from './src/plugins/brand.ts';
 import { callouts } from './src/plugins/callouts.ts';
 
 const site = process.env.SITE_URL ?? 'https://mailsieve.pmqueiroz.dev';
@@ -19,7 +20,7 @@ export default defineConfig({
     syntaxHighlight: false,
     processor: satteri({
       features: { directive: true },
-      mdastPlugins: [callouts],
+      mdastPlugins: [callouts, brand],
     }),
   },
   vite: { plugins: [tailwindcss()] },
