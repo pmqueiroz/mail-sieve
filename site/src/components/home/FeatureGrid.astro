@@ -1,0 +1,31 @@
+---
+const features = [
+  {
+    title: 'One-click unsubscribe',
+    body: 'Uses the List-Unsubscribe header (RFC 8058 one-click or mailto), so you never open the email or click a tracked link.',
+  },
+  {
+    title: 'Undo from Activity',
+    body: 'Archive, trash and move jobs land in the activity log and can be reversed against the server.',
+  },
+  { title: 'Multiple accounts', body: 'Connect personal and work mailboxes and clean them from one place.' },
+  { title: 'Storage view', body: 'Sort senders by megabytes to find the ones eating your quota.' },
+  {
+    title: 'Fast local index',
+    body: 'Headers live in SQLite, so counts, searches and sender groups answer in milliseconds.',
+  },
+  {
+    title: 'Gmail aware',
+    body: 'Indexes All Mail with its labels, so every message is counted once and archive does what Gmail means by it.',
+  },
+];
+---
+
+<div class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,--spacing(150)),1fr))] border-t border-l border-line">
+  {features.map((f) => (
+    <div class="flex flex-col gap-5 border-r border-b border-line p-14">
+      <h3 class="m-0 text-lead font-semibold tracking-soft">{f.title}</h3>
+      <p class="m-0 text-base leading-body text-pretty text-ink-2">{f.body}</p>
+    </div>
+  ))}
+</div>

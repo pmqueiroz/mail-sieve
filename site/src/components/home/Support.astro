@@ -1,0 +1,27 @@
+---
+import SectionIntro from './SectionIntro.astro';
+import SupportCard from './SupportCard.astro';
+import { href } from '../../lib/paths';
+import { links } from '../../lib/site';
+---
+
+<section id="support" class="mx-auto max-w-page px-12 py-56">
+  <SectionIntro eyebrow="support the project" title="Free forever. Kept alive by the people who use it." align="center" class="mb-24">
+    mail-sieve has no paid tier and no investors. Donations pay for maintenance time and provider test accounts.
+  </SectionIntro>
+  <div class="mx-auto grid max-w-[--spacing(480)] grid-cols-[repeat(auto-fit,minmax(min(100%,--spacing(160)),1fr))] gap-10">
+    <SupportCard href={links.sponsors} icon="heart" title="GitHub Sponsors" cta="Sponsor on GitHub" variant="primary">
+      Monthly or one-time. GitHub takes no fees, and sponsors are listed in the README.
+    </SupportCard>
+    <SupportCard href={links.patreon} icon="patreon" title="Patreon" cta="Become a patron" variant="outline">
+      Back the project on Patreon and get early notes on what's coming next.
+    </SupportCard>
+  </div>
+  <p class="mt-16 mb-0 text-center text-base text-ink-2">
+    Can't donate? <a href={links.repo} target="_blank" rel="noopener">Star the repo</a>, <a
+      href={links.issues}
+      target="_blank"
+      rel="noopener">report a bug</a
+    > or <a href={href('/docs/contributing/')}>contribute</a>.
+  </p>
+</section>

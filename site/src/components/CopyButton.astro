@@ -1,0 +1,29 @@
+---
+interface Props {
+  text: string;
+  class?: string;
+}
+
+const { text, class: className } = Astro.props;
+---
+
+<span
+  data-copy-label
+  class:list={['grid shrink-0 place-items-center rounded-md bg-chip px-6 font-mono text-xs font-medium text-ink-2', className]}
+  data-copy={text}>Copy</span
+>
+
+<script>
+  document.addEventListener('click', async (event) => {
+    const trigger = (event.target as Element).closest<HTMLElement>('[data-copy-trigger]');
+    const label = trigger?.querySelector<HTMLElement>('[data-copy-label]');
+    if (!label?.dataset.copy) return;
+    await navigator.clipboard.writeText(label.dataset.copy).catch(() => undefined);
+    label.textContent = 'Copied';
+    label.classList.add('text-good');
+    window.setTimeout(() => {
+      label.textContent = 'Copy';
+      label.classList.remove('text-good');
+    }, 1600);
+  });
+</script>

@@ -1,0 +1,33 @@
+---
+import CodeWindow from './CodeWindow.astro';
+import SectionIntro from './SectionIntro.astro';
+import { href } from '../../lib/paths';
+import { composeFile } from '../../lib/site';
+
+const points = [
+  'Runs anywhere Docker runs',
+  'Credentials encrypted at rest with a key that stays in your data folder',
+  'Plain IMAP, so nothing is locked in',
+];
+---
+
+<section class="border-y border-hairline bg-band">
+  <div class="mx-auto grid max-w-page grid-cols-[repeat(auto-fit,minmax(min(100%,--spacing(220)),1fr))] items-center gap-24 px-12 py-48">
+    <div class="flex flex-col gap-10">
+      <SectionIntro eyebrow="self-hosted" title="Your mail stays on your hardware." size="md">
+        One container, one data volume. mail-sieve indexes message headers locally and fetches a body only when you open
+        a preview. Nothing phones home.
+      </SectionIntro>
+      <ul class="m-0 flex list-none flex-col gap-5 p-0">
+        {points.map((point) => (
+          <li class="flex gap-6">
+            <span class="text-good" aria-hidden="true">✓</span>
+            <span>{point}</span>
+          </li>
+        ))}
+      </ul>
+      <a href={href('/docs/install/')} class="mt-2 self-start text-body font-semibold">Read the install guide</a>
+    </div>
+    <CodeWindow filename="docker/compose.yml" code={composeFile} />
+  </div>
+</section>

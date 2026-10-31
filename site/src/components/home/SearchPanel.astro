@@ -1,0 +1,26 @@
+---
+const syntax = [
+  { term: 'from:', meaning: 'Address, *@domain or a name' },
+  { term: 'older_than:', meaning: 'Age, e.g. 30d, 6m, 1y' },
+  { term: 'larger:', meaning: 'Size, e.g. 5mb' },
+  { term: 'is:unread', meaning: 'Read state' },
+  { term: 'has:list', meaning: 'Any mailing list' },
+];
+---
+
+<div class="flex flex-col gap-8">
+  <div class="box-content flex min-h-24 flex-wrap items-center gap-x-6 gap-y-2 rounded-card border border-line-3 bg-surface px-9 py-5 font-mono text-sm">
+    <span><span class="text-accent-soft">from:</span>*@linkedin.com</span>
+    <span><span class="text-good">older_than:</span>1y</span>
+    <span><span class="text-warn">is:</span>unread</span>
+  </div>
+  <div class="pl-3 text-base text-ink-2"><b class="text-ink">1,246</b> messages · 239 MB</div>
+  <dl class="m-0 flex flex-col border-t border-line pt-3">
+    {syntax.map((x) => (
+      <div class="grid grid-cols-[--spacing(75)_minmax(0,1fr)] gap-6 px-3 py-3.5 text-sm">
+        <dt><code class="font-mono text-xs text-ink">{x.term}</code></dt>
+        <dd class="m-0 text-ink-2">{x.meaning}</dd>
+      </div>
+    ))}
+  </dl>
+</div>

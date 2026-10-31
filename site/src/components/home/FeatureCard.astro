@@ -1,0 +1,18 @@
+---
+import Eyebrow from '../Eyebrow.astro';
+
+interface Props {
+  tag: string;
+  title: string;
+  link?: { href: string; label: string };
+}
+
+const { tag, title, link } = Astro.props;
+---
+
+<div class="flex flex-col justify-center gap-7 rounded-card border border-line bg-surface p-card">
+  <Eyebrow tone="muted">{tag}</Eyebrow>
+  <h3 class="m-0 text-3xl leading-snug font-bold tracking-title">{title}</h3>
+  <p class="m-0 text-pretty text-ink-2"><slot /></p>
+  {link && <a href={link.href} class="self-start text-base font-semibold">{link.label}</a>}
+</div>

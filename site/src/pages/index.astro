@@ -1,0 +1,82 @@
+---
+import FeatureCard from '../components/home/FeatureCard.astro';
+import FeatureGrid from '../components/home/FeatureGrid.astro';
+import FeatureRow from '../components/home/FeatureRow.astro';
+import Hero from '../components/home/Hero.astro';
+import Panel from '../components/home/Panel.astro';
+import RulePanel from '../components/home/RulePanel.astro';
+import SearchPanel from '../components/home/SearchPanel.astro';
+import SectionIntro from '../components/home/SectionIntro.astro';
+import SelfHosted from '../components/home/SelfHosted.astro';
+import SenderTable from '../components/home/SenderTable.astro';
+import Support from '../components/home/Support.astro';
+import Base from '../layouts/Base.astro';
+import { href } from '../lib/paths';
+import { links, site } from '../lib/site';
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: site.name,
+    description: site.description,
+    applicationCategory: 'UtilitiesApplication',
+    operatingSystem: 'Linux, macOS, Windows (Docker)',
+    url: new URL(href('/'), Astro.site).toString(),
+    codeRepository: links.repo,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: site.name,
+    url: new URL(href('/'), Astro.site).toString(),
+  },
+];
+---
+
+<Base title={site.title} description={site.description} section="home" jsonLd={jsonLd}>
+  <main>
+    <Hero />
+
+    <section class="mx-auto max-w-page px-12 pt-48 pb-16">
+      <SectionIntro id="features" eyebrow="features" title="Built for the inbox with 40,000 unread.">
+        Email clients make you work one message at a time. mail-sieve works one sender at a time, which is how the
+        clutter arrived in the first place.
+      </SectionIntro>
+    </section>
+
+    <section class="mx-auto flex max-w-page flex-col gap-10 px-12 py-16">
+      <FeatureRow>
+        <FeatureCard tag="01 · senders" title="See who's filling your inbox">
+          Every sender, domain and mailing list, ranked by message count, unread count and storage. Most people find a
+          handful of senders account for a third of everything.
+        </FeatureCard>
+        <Panel><SenderTable /></Panel>
+      </FeatureRow>
+
+      <FeatureRow>
+        <Panel><SearchPanel /></Panel>
+        <FeatureCard tag="02 · search" title="Search the way you think about mail" link={{ href: href('/docs/search/'), label: 'Full search syntax' }}>
+          Combine sender, age, size, read state and mailing-list filters. The match count updates as you type, so you
+          know exactly what an action will touch before you take it.
+        </FeatureCard>
+      </FeatureRow>
+
+      <FeatureRow>
+        <FeatureCard tag="03 · rules" title="Rules that keep it clean" link={{ href: href('/docs/rules/'), label: 'How rules work' }}>
+          Save any search as a rule and pick an action. Rules run after every sync or on a timer, and they can never
+          delete permanently.
+        </FeatureCard>
+        <Panel class="items-center"><RulePanel /></Panel>
+      </FeatureRow>
+    </section>
+
+    <section class="mx-auto max-w-page px-12 pt-16 pb-48">
+      <FeatureGrid />
+    </section>
+
+    <SelfHosted />
+    <Support />
+  </main>
+</Base>

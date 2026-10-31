@@ -1,0 +1,20 @@
+---
+import CopyButton from '../CopyButton.astro';
+
+interface Props {
+  filename: string;
+  code: string;
+}
+
+const { filename, code } = Astro.props;
+---
+
+<div class="min-w-0 overflow-hidden rounded-3xl border border-line bg-sunken">
+  <div class="flex h-22 items-center border-b border-line pr-4 pl-9 font-mono text-xs text-ink-3">
+    <span class="flex-1">{filename}</span>
+    <button type="button" data-copy-trigger aria-label={`Copy ${filename}`} class="cursor-pointer border-0 bg-transparent p-0">
+      <CopyButton text={code} class="h-15" />
+    </button>
+  </div>
+  <pre class="m-0 overflow-x-auto px-11 py-10 font-mono text-sm leading-code text-code">{code}</pre>
+</div>

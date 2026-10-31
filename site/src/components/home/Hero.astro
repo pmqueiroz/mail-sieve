@@ -1,0 +1,63 @@
+---
+import { Picture } from 'astro:assets';
+import demo from '../../assets/demo.png';
+import CopyButton from '../CopyButton.astro';
+import PillLink from '../PillLink.astro';
+import { href } from '../../lib/paths';
+import { installCommand, links } from '../../lib/site';
+---
+
+<section class="bg-hero-glow">
+  <div class="mx-auto flex max-w-page flex-col gap-14 px-12 pt-hero pb-28">
+    <div class="flex flex-wrap items-center gap-5 font-mono text-sm text-ink-2">
+      <span class="size-4 rounded-full bg-accent"></span>
+      <span>open source · self-hosted · any IMAP server</span>
+    </div>
+    <h1 class="m-0 max-w-hero text-hero leading-hero font-bold tracking-hero text-balance">
+      Clean out years of email in an afternoon.
+    </h1>
+    <p class="m-0 max-w-lead text-hero-lead leading-lead text-pretty text-ink-2">
+      mail-sieve groups every message by sender, then lets you archive, trash or unsubscribe from thousands at once. It
+      runs on your own machine, so your mail never passes through anyone else's server.
+    </p>
+    <div class="flex flex-wrap items-center gap-6">
+      <PillLink href={href('/docs/install/')} size="lg">Install in 2 minutes</PillLink>
+      <PillLink href={links.repo} external variant="outline" size="lg">View source on GitHub</PillLink>
+    </div>
+    <button
+      type="button"
+      data-copy-trigger
+      aria-label="Copy install command"
+      class="flex h-24 max-w-full cursor-pointer items-center gap-7 self-start rounded-xl border border-line bg-sunken pr-4 pl-9 font-mono text-sm text-ink-2 hover:border-line-3"
+    >
+      <span class="text-accent">$</span>
+      <span class="min-w-0 truncate text-ink">{installCommand}</span>
+      <CopyButton text={installCommand} class="h-16" />
+    </button>
+  </div>
+  <div class="mx-auto max-w-page px-12 pb-48">
+    <figure class="m-0">
+      <div class="overflow-hidden rounded-2xl border border-line bg-surface shadow-demo">
+        <div class="flex h-20 items-center gap-4 border-b border-line bg-sunken px-8" aria-hidden="true">
+          <span class="size-5 rounded-full bg-line-2"></span>
+          <span class="size-5 rounded-full bg-line-2"></span>
+          <span class="size-5 rounded-full bg-line-2"></span>
+          <span class="flex-1 text-center font-mono text-xs text-ink-3">localhost:8080</span>
+          <span class="w-23"></span>
+        </div>
+        <Picture
+          src={demo}
+          alt="The mail-sieve Overview screen: message totals, the share of mail from senders you never open, and the biggest senders ranked by count."
+          formats={["avif"]}
+          fallbackFormat="webp"
+          widths={[640, 960, 1280, 1920, 2560]}
+          sizes="(min-width: 1200px) 1152px, calc(100vw - 48px)"
+          loading="eager"
+          decoding="async"
+          class="block aspect-[16/10] h-auto w-full"
+        />
+      </div>
+      <figcaption class="mt-7 text-sm text-ink-3">The Overview screen, shown here with sample data.</figcaption>
+    </figure>
+  </div>
+</section>
