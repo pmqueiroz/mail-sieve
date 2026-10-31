@@ -1,19 +1,25 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { runAction } from '../lib/actions';
   import { api, errorMessage, withParams } from '../lib/api';
-  import ActionBar from '../lib/components/ActionBar.svelte';
-  import Badge from '../lib/components/Badge.svelte';
-  import BulkActions from '../lib/components/BulkActions.svelte';
-  import EmptyState from '../lib/components/EmptyState.svelte';
+  import Avatar from '../lib/components/Avatar.svelte';
+  import BulkBar from '../lib/components/BulkBar.svelte';
+  import Button from '../lib/components/Button.svelte';
+  import Checkbox from '../lib/components/Checkbox.svelte';
+  import Pill from '../lib/components/Pill.svelte';
   import QueryBar from '../lib/components/QueryBar.svelte';
   import VirtualList from '../lib/components/VirtualList.svelte';
-  import { actionLabel, formatBytes, formatDate, formatDateTime, formatNumber } from '../lib/format';
+  import { formatBytes, formatNumber, formatShortDate } from '../lib/format';
   import { router } from '../lib/router.svelte';
   import { session } from '../lib/session.svelte';
   import { toasts } from '../lib/toasts.svelte';
   import type { MessagePage, MessageRow, Preview, Totals } from '../lib/types';
 
   const PAGE = 300;
+  const ROW_CONTENT_HEIGHT = 56;
+  const HAIRLINE = 1;
+  const ROW_HEIGHT = ROW_CONTENT_HEIGHT + HAIRLINE;
+  const INBOX = 'INBOX';
 
   let { accountId }: { accountId: number } = $props();
 
@@ -29,9 +35,17 @@
   let previewError = $state<string | null>(null);
   let generation = 0;
 
+  const gmail = $derived(session.current?.provider === 'gmail');
   const selection = $derived(Object.values(selected));
+  const allLoaded = $derived(messages.length > 0 && selection.length === messages.length);
   const selectedCount = $derived(allMatching ? (totals?.count ?? 0) : selection.length);
   const selectedBytes = $derived(allMatching ? (totals?.bytes ?? 0) : selection.reduce((sum, m) => sum + m.size, 0));
+  const who = $derived.by(() => {
+    if (allMatching) return 'this search';
+    const senders = new Set(selection.map((message) => message.from_addr));
+    if (senders.size === 1) return selection[0]!.from_name ?? selection[0]!.from_addr;
+    return `${formatNumber(senders.size)} senders`;
+  });
   const resetKey = $derived(`${accountId}|${query}`);
 
   $effect(() => {
@@ -53,12 +67,7 @@
     try {
       const cursor = reset ? null : next;
       const page = await api.get<MessagePage>(
-        withParams(`/accounts/${accountId}/messages`, {
-          q: query,
-          limit: PAGE,
-          before_date: cursor?.before_date,
-          before_id: cursor?.before_id,
-        }),
+        withParams(`/accounts/${accountId}/messages`, { q: query, limit: PAGE, before_date: cursor?.before_date, before_id: cursor?.before_id }),
       );
       if (current !== generation) return;
       messages = reset ? page.messages : [...messages, ...page.messages];
@@ -77,8 +86,7 @@
   $effect(() => {
     void resetKey;
     untrack(() => {
-      selected = {};
-      allMatching = false;
+      clear();
       load(true);
     });
   });
@@ -95,7 +103,7 @@
 
   function toggleAll() {
     allMatching = false;
-    if (selection.length > 0) selected = {};
+    if (allLoaded) selected = {};
     else selected = Object.fromEntries(messages.map((message) => [message.id, message]));
   }
 
@@ -105,13 +113,19 @@
   }
 
   async function run(action: string, confirm: boolean) {
-    const body = allMatching
-      ? { query, action, confirm: confirm || query === '' }
-      : { ids: selection.map((message) => message.id), action, confirm };
-    const response = await api.post<{ job_id: number | null }>(`/accounts/${accountId}/actions`, body);
-    if (response.job_id === null) toasts.show('Nothing to do, no messages matched.');
-    else toasts.show(`${actionLabel(action)} queued for ${formatNumber(selectedCount)} messages.`, 'success');
+    const target = allMatching ? { query } : { ids: selection.map((message) => message.id) };
+    await runAction(accountId, target, action, confirm || (allMatching && query === ''), { count: selectedCount, who });
     clear();
+  }
+
+  async function runOne(action: string) {
+    if (!active) return;
+    try {
+      await runAction(accountId, { ids: [active.id] }, action, false, { count: 1, who: active.from_name ?? active.from_addr });
+      active = null;
+    } catch (error) {
+      toasts.show(errorMessage(error), 'error');
+    }
   }
 
   async function open(message: MessageRow) {
@@ -125,211 +139,98 @@
       if (active?.id === message.id) previewError = errorMessage(error);
     }
   }
+
+  function folderTag(message: MessageRow): string | null {
+    return gmail || message.mailbox === INBOX ? null : message.mailbox;
+  }
 </script>
 
-<section class="page">
-  <div class="page-header">
-    <h1>Messages</h1>
-  </div>
-
-  <div class="toolbar">
-    <QueryBar {accountId} bind:value={query} bind:totals placeholder="Search: from:*@linkedin.com older_than:1y" />
-  </div>
-
-  {#if selection.length > 0 && selection.length === messages.length && totals && totals.count > messages.length && !allMatching}
-    <div class="select-all">
-      All {formatNumber(messages.length)} loaded messages are selected.
-      <button onclick={() => (allMatching = true)}>Select all {formatNumber(totals.count)} matching messages</button>
-    </div>
-  {/if}
-
-  <ActionBar count={selectedCount} bytes={selectedBytes} onclear={clear}>
-    <BulkActions {accountId} count={selectedCount} onrun={run} />
-  </ActionBar>
-
-  <div class="split">
-    <div class="table card">
-      <div class="head">
-        <span class="check"><input type="checkbox" aria-label="Select loaded" checked={allMatching || (selection.length > 0 && selection.length === messages.length)} indeterminate={!allMatching && selection.length > 0 && selection.length < messages.length} onchange={toggleAll} /></span>
-        <span>From</span>
-        <span>Subject</span>
-        <span class="right">Size</span>
-        <span class="right">Date</span>
-      </div>
-      {#if messages.length === 0 && !loading}
-        <EmptyState title="No messages match" />
-      {:else}
-        <VirtualList items={messages} key={(message) => message.id} {resetKey} onEndReached={() => load(false)}>
-          {#snippet row(message: MessageRow)}
-            <div class="line" class:selected={allMatching || !!selected[message.id]} class:active={active?.id === message.id} class:unread={message.unread}>
-              <span class="check"><input type="checkbox" aria-label="Select message" checked={allMatching || !!selected[message.id]} onchange={() => toggle(message)} /></span>
-              <button class="cell from truncate" onclick={() => open(message)}>{message.from_name ?? message.from_addr}</button>
-              <button class="cell subject" onclick={() => open(message)}>
-                <span class="truncate">{message.subject ?? '(no subject)'}</span>
-                {#if message.flagged}<Badge tone="warning">flagged</Badge>{/if}
-                {#if message.mailbox !== 'INBOX'}<Badge>{message.mailbox}</Badge>{/if}
-              </button>
-              <span class="right muted">{formatBytes(message.size)}</span>
-              <span class="right muted">{formatDate(message.date)}</span>
-            </div>
-          {/snippet}
-        </VirtualList>
-      {/if}
-    </div>
-
-    {#if active}
-      <aside class="preview card">
-        <header>
-          <h2>{active.subject ?? '(no subject)'}</h2>
-          <button class="close" aria-label="Close preview" onclick={() => (active = null)}>×</button>
-        </header>
-        <dl>
-          <dt>From</dt>
-          <dd>{active.from_name ? `${active.from_name} <${active.from_addr}>` : active.from_addr}</dd>
-          <dt>Date</dt>
-          <dd>{formatDateTime(active.date)}</dd>
-          <dt>Folder</dt>
-          <dd>{active.mailbox}</dd>
-        </dl>
-        {#if previewError}
-          <p class="error">{previewError}</p>
-        {:else if !preview}
-          <p class="muted">Loading message from the server…</p>
+<div class="grid grid-cols-[minmax(0,1fr)] gap-12 pt-2 split:grid-cols-[minmax(0,1fr)_minmax(0,--spacing(220))]">
+  <div class="flex min-w-0 flex-col gap-6">
+    <QueryBar {accountId} bind:value={query} bind:totals showCount={false} placeholder="Search messages">
+      {#snippet trailing()}<span class="whitespace-nowrap text-xs text-ink3">Newest first</span>{/snippet}
+    </QueryBar>
+    {#if allLoaded}
+      <div class="flex flex-wrap items-center gap-6 rounded-lg bg-chip px-7 py-5 text-sm">
+        {#if allMatching}
+          <span>All {formatNumber(totals?.count ?? 0)} matching messages are selected.</span>
+          <button type="button" class="border-0 bg-transparent p-0 text-sm font-bold underline" onclick={clear}>Clear selection</button>
         {:else}
-          {#if preview.attachments.length > 0}
-            <p class="muted">Attachments: {preview.attachments.join(', ')}</p>
+          <span>All {formatNumber(messages.length)} loaded messages are selected.</span>
+          {#if totals && totals.count > messages.length}
+            <button type="button" class="border-0 bg-transparent p-0 text-sm font-bold underline" onclick={() => (allMatching = true)}>Select all {formatNumber(totals.count)} matching messages</button>
           {/if}
-          <pre class="body">{preview.text || '(this message has no text part)'}</pre>
         {/if}
-      </aside>
+      </div>
     {/if}
+    <div class="border-t border-line">
+      <div class="box-content flex h-18 items-center gap-6 border-b border-line text-xs text-ink3">
+        <Checkbox label="Select loaded messages" checked={allLoaded} partial={selection.length > 0} onchange={toggleAll} />
+        <span>{formatNumber(messages.length)} loaded</span>
+      </div>
+      <VirtualList items={messages} key={(message) => message.id} rowHeight={ROW_HEIGHT} {resetKey} onEndReached={() => load(false)}>
+        {#snippet row(message: MessageRow)}
+          {@const tag = folderTag(message)}
+          <div
+            role="button"
+            tabindex="0"
+            class="box-content flex h-28 cursor-pointer items-center gap-6 border-b border-line pr-4 {active?.id === message.id ? 'bg-chip' : 'bg-transparent'}"
+            onclick={() => open(message)}
+            onkeydown={(event) => event.key === 'Enter' && open(message)}>
+            <Checkbox label="Select message" checked={allMatching || !!selected[message.id]} onchange={() => toggle(message)} />
+            <span class="size-4 shrink-0 rounded-full bg-ring {message.unread ? 'opacity-100' : 'opacity-0'}"></span>
+            <span class="flex min-w-0 flex-1 flex-col leading-row">
+              <span class="flex items-center gap-4">
+                <span class="truncate {message.unread ? 'font-bold' : 'font-medium'}">{message.from_name ?? message.from_addr}</span>
+                {#if message.flagged}<Pill tone="warn" size="tag">Flagged</Pill>{/if}
+                {#if tag}<Pill size="tag">{tag}</Pill>{/if}
+              </span>
+              <span class="truncate text-sm {message.unread ? 'font-semibold text-ink' : 'font-normal text-ink2'}">{message.subject ?? '(no subject)'}</span>
+            </span>
+            <span class="shrink-0 text-xs text-ink3">{formatShortDate(message.date)}</span>
+          </div>
+        {/snippet}
+      </VirtualList>
+      {#if messages.length === 0 && !loading}
+        <div class="py-24 text-center text-ink2">No messages match this search.</div>
+      {/if}
+      <div class="h-48"></div>
+    </div>
   </div>
-</section>
 
-<style>
-  .select-all {
-    font-size: var(--text-sm);
-    text-align: center;
-  }
-  .select-all button {
-    border: none;
-    background: none;
-    color: var(--color-accent);
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .split {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    gap: var(--space-4);
-  }
-  .table {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .head,
-  .line {
-    display: grid;
-    grid-template-columns: 40px minmax(110px, 220px) minmax(140px, 1fr) 70px 100px;
-    align-items: center;
-    width: 100%;
-    padding: 0 var(--space-3);
-    gap: var(--space-2);
-  }
-  .head {
-    height: 38px;
-    border-bottom: 1px solid var(--color-border);
-    font-size: var(--text-xs);
-    font-weight: 650;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--color-text-muted);
-  }
-  .line {
-    border-bottom: 1px solid var(--color-border);
-  }
-  .line:hover {
-    background: var(--color-surface-muted);
-  }
-  .line.selected {
-    background: var(--color-selected);
-  }
-  .line.active {
-    box-shadow: inset 3px 0 0 var(--color-accent);
-  }
-  .line.unread .from,
-  .line.unread .subject {
-    font-weight: 650;
-  }
-  .cell {
-    border: none;
-    background: none;
-    padding: 0;
-    text-align: left;
-    cursor: pointer;
-    min-width: 0;
-    height: 100%;
-  }
-  .subject {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-  .right {
-    text-align: right;
-    font-size: var(--text-sm);
-    font-variant-numeric: tabular-nums;
-  }
-  .preview {
-    width: min(46%, 640px);
-    display: flex;
-    flex-direction: column;
-    padding: var(--space-4) var(--space-5);
-    overflow: auto;
-    gap: var(--space-3);
-  }
-  .preview header {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-3);
-  }
-  .preview h2 {
-    margin: 0;
-    font-size: var(--text-lg);
-  }
-  .close {
-    border: none;
-    background: none;
-    font-size: 22px;
-    cursor: pointer;
-    color: var(--color-text-muted);
-  }
-  dl {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: var(--space-1) var(--space-3);
-    margin: 0;
-    font-size: var(--text-sm);
-  }
-  dt {
-    color: var(--color-text-muted);
-  }
-  dd {
-    margin: 0;
-    word-break: break-word;
-  }
-  .body {
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: var(--font-sans);
-    line-height: 1.5;
-    margin: 0;
-  }
-  .error {
-    color: var(--color-danger);
-  }
-</style>
+  {#if active}
+    <aside
+      class="fixed inset-0 z-40 box-content flex flex-col overflow-hidden border border-line bg-surface wide:inset-y-12 wide:right-12 wide:left-auto wide:w-220 wide:rounded-3xl split:sticky split:top-8 split:z-auto split:h-[calc(100vh-var(--spacing)*80)] split:w-auto">
+      <div class="flex flex-col gap-3 border-b border-line px-11 py-10">
+        <div class="flex items-center gap-5">
+          <Avatar label={active.from_name ?? active.from_addr} seed={active.from_addr} size="lg" />
+          <span class="flex min-w-0 flex-1 flex-col leading-snug">
+            <span class="truncate font-semibold">{active.from_name ?? active.from_addr}</span>
+            <span class="truncate text-xs text-ink3">{active.from_addr}</span>
+          </span>
+          <button type="button" aria-label="Close preview" class="size-16 shrink-0 rounded-full border border-line bg-transparent" onclick={() => (active = null)}>✕</button>
+        </div>
+        <div class="mt-4 text-pretty text-lg font-semibold tracking-snug">{active.subject ?? '(no subject)'}</div>
+        <div class="text-xs text-ink3">{formatShortDate(active.date)} · {active.mailbox === INBOX ? 'Inbox' : active.mailbox} · {formatBytes(active.size)}</div>
+      </div>
+      <div class="flex-1 overflow-auto px-11 py-10 text-base leading-relaxed text-ink2">
+        {#if previewError}
+          <span class="text-bad">{previewError}</span>
+        {:else if !preview}
+          Loading message from the server…
+        {:else}
+          {#if preview.attachments.length > 0}<div class="mb-6 text-xs text-ink3">Attachments: {preview.attachments.join(', ')}</div>{/if}
+          <pre class="m-0 font-sans break-words whitespace-pre-wrap">{preview.text || '(this message has no text part)'}</pre>
+        {/if}
+      </div>
+      <div class="border-t border-line px-11 py-6 text-xs text-ink3">Plain-text preview. Images, links and formatting are never loaded.</div>
+      <div class="flex flex-wrap gap-4 px-11 pt-6 pb-9">
+        <Button size="xl-wide" variant="primary" onclick={() => runOne('archive')}>Archive</Button>
+        <Button size="xl-wide" onclick={() => runOne('trash')}>Move to trash</Button>
+        <Button size="xl-wide" onclick={() => router.go('senders', { select: active!.from_addr })}>All from this sender</Button>
+      </div>
+    </aside>
+  {/if}
+</div>
+
+<BulkBar {accountId} count={selectedCount} bytes={selectedBytes} {who} onrun={run} onclear={clear} />
