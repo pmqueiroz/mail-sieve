@@ -1128,7 +1128,7 @@ dependencies = [
 
 [[package]]
 name = "mail-sieve"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "argon2",
  "axum",
@@ -1161,11 +1161,11 @@ dependencies = [
 
 [[package]]
 name = "mail-sieve-core"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "mail-sieve-imap"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-imap",
  "futures",
@@ -1180,7 +1180,7 @@ dependencies = [
 
 [[package]]
 name = "mail-sieve-store"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "mail-sieve-core",
  "rusqlite",
@@ -1192,7 +1192,7 @@ dependencies = [
 
 [[package]]
 name = "mail-sieve-unsub"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "lettre",
  "reqwest",
