@@ -129,10 +129,10 @@ and README and rewritten where they were wrong:
   senders, arm64 images, "undo for 30 days" (undo exists, from the toast or
   Activity, once).
 
-Still placeholder, needs the owner's decision: the GitHub Sponsors and
-Patreon URLs in `lib/site.ts` (neither is known to exist), the
-"Free forever / no investors / donations pay for..." support copy, and the
-illustrative numbers in the home page panels (sender counts, "1,246
+Support is GitHub Sponsors only, on the owner's personal account
+(`github.com/sponsors/pmqueiroz`); Patreon was dropped. Still placeholder:
+the "Free forever / no investors / donations pay for..." support copy and
+the illustrative numbers in the home page panels (sender counts, "1,246
 messages", "Last run 09:15").
 
 ## Commands

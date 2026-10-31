@@ -9,12 +9,9 @@ import { links } from '../../lib/site';
   <SectionIntro eyebrow="support the project" title="Free forever. Kept alive by the people who use it." align="center" class="mb-24">
     mail-sieve has no paid tier and no investors. Donations pay for maintenance time and provider test accounts.
   </SectionIntro>
-  <div class="mx-auto grid max-w-[--spacing(480)] grid-cols-[repeat(auto-fit,minmax(min(100%,--spacing(160)),1fr))] gap-10">
-    <SupportCard href={links.sponsors} icon="heart" title="GitHub Sponsors" cta="Sponsor on GitHub" variant="primary">
-      Monthly or one-time. GitHub takes no fees, and sponsors are listed in the README.
-    </SupportCard>
-    <SupportCard href={links.patreon} icon="patreon" title="Patreon" cta="Become a patron" variant="outline">
-      Back the project on Patreon and get early notes on what's coming next.
+  <div class="mx-auto max-w-[--spacing(240)]">
+    <SupportCard href={links.sponsors} title="GitHub Sponsors" cta="Sponsor on GitHub">
+      Monthly or one-time. GitHub takes no fees on sponsorships from personal accounts.
     </SupportCard>
   </div>
   <p class="mt-16 mb-0 text-center text-base text-ink-2">

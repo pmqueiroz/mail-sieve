@@ -15,7 +15,6 @@ export const links = {
   license: `${repo}/blob/main/LICENSE`,
   docsSource: `${repo}/edit/main/site/src/content/docs`,
   sponsors: 'https://github.com/sponsors/pmqueiroz',
-  patreon: 'https://www.patreon.com/mailsieve',
 };
 
 export const installCommand =
