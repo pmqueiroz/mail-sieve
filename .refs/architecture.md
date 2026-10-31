@@ -97,6 +97,9 @@ See `crates/store/src/schema.sql`. Highlights:
 - `action_log.bytes` records the size of messages an action removed from
   their folder (archive, trash, delete, move), which feeds the Overview
   "freed this week" figure. Flag changes log 0 bytes.
+- `pinned_senders(account_id, kind, key)` holds pins, `kind` is `sender`
+  (an address) or `domain`. Keys are lowercased, a leading `@` is
+  dropped. See Pins below.
 - UIDVALIDITY change: every row of that mailbox is deleted and re-synced.
   Never reconcile across UIDVALIDITY.
 
@@ -105,7 +108,7 @@ See `crates/store/src/schema.sql`. Highlights:
 `Query::parse` produces AND-ed terms; any term can be negated with `-`.
 Fields: `from:` (exact with `@`, wildcard with `*`, otherwise substring of
 address or name), `domain:` (matches subdomains), `subject:`, `list:`,
-`in:` (folder name or Gmail label), `is:unread|read|flagged|answered`,
+`in:` (folder name or Gmail label), `is:unread|read|flagged|answered|pinned`,
 `has:unsubscribe|list`, `older_than:`/`newer_than:` (`h d w m y`),
 `before:`/`after:` (`YYYY-MM-DD`, UTC), `larger:`/`smaller:` (`kb mb gb`),
 `category:` (see below), bare words go to FTS5 as prefix matches. Every compiled clause is wrapped
@@ -130,6 +133,41 @@ It is a heuristic over headers only, chosen so the Overview "Inbox mix" and
 the `category:` filter always agree: both use the same expression. Order
 matters: a receipt from a mailing list is a receipt. Singular names
 (`category:receipt`) and `cat:` are accepted.
+
+## Pins
+
+A pin protects a sender or a domain from accidents: bulk actions, rules
+and unsubscribe follow-ups skip its messages. `store::pins` owns the SQL.
+A domain pin covers its subdomains the same way `domain:` does (exact
+match or a `.`-suffix match, done with `substr` so `_` and `%` in the key
+are not LIKE wildcards).
+
+- **Where the guard lives.** Target resolution, not the UI.
+  `search::resolve` / `resolve_ids` return `targets` plus the `skipped`
+  pinned targets, and `actions::enqueue` is the only caller, so every
+  entry point (Senders, Messages, rules, unsubscribe follow-up) gets the
+  same guard. The skipped count goes back to the caller
+  (`skipped_pinned` in the action, rule run and unsubscribe responses)
+  and into the job payload, so nothing is excluded silently.
+- **The explicit override.** `POST /accounts/{id}/actions` with
+  `include_pinned: true` acts on pinned messages too, and requires
+  `confirm`. The UI only offers it when a single pinned sender (Senders)
+  or a single message from one (Messages preview) is selected, behind
+  `PinnedConfirm`. Rules and unsubscribe follow-ups never pass it.
+- **Read side.** `Totals.pinned` counts matching pinned messages (used by
+  the rule editor hint and Messages "select all"). Sender and domain
+  groups carry `pinned_count` (messages in the group from pinned
+  senders, which feeds the action bar's "N from pinned senders are
+  skipped") and `pin`, the pin that covers the group key (an exact sender
+  pin wins over a domain pin, then the longest domain). Pinned groups
+  sort first. Message rows carry the same `pin`. `pin` tells the UI which
+  pin to remove: a sender protected by a domain pin shows a disabled pin
+  button, since unpinning the sender would change nothing.
+- **API.** `GET|POST|DELETE /accounts/{id}/pins` (`DELETE` takes `kind`
+  and `key` as query parameters).
+- **Not covered.** Unsubscribing itself is not blocked for a pinned
+  sender (it does not touch messages); only its follow-up is. Pins are
+  not part of the rules YAML file.
 
 ## Overview stats
 
@@ -200,6 +238,7 @@ undo twice.
 
 - Rules are saved query + action, run after each sync and/or every N
   minutes. They cannot use `delete` and cannot have an empty query.
+  They always skip pinned senders.
 - Rules export and import as YAML per account
   (`server/src/rules_file.rs`): `GET /accounts/{id}/rules/export` (also
   `mail-sieve rules export`) and `POST /accounts/{id}/rules/import` with

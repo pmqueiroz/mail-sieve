@@ -41,6 +41,9 @@ bulk. These are the decisions that protect that, and the reasons.
 - Rules cannot permanently delete. Unsubscribe follow-ups cannot either.
   Imported rule files go through the same validation, so a YAML file can
   never introduce a permanent-delete rule.
+- Pinned senders and domains are excluded when action targets are
+  resolved (`search::resolve`), so rules, bulk actions and unsubscribe
+  follow-ups skip them. Overriding needs `include_pinned` plus `confirm`.
 - Before writing, the action engine checks UIDVALIDITY against the index
   and refuses on mismatch, so stale UIDs never hit the wrong messages.
 

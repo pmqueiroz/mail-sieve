@@ -61,6 +61,12 @@ One concept, one component (`web/src/lib/components`):
   key), `ProgressBar`, `Icon` (the design's SVG set).
 - `Modal` (native `<dialog>`, backdrop click and Esc close), `Popover`
   (outside click and Esc close), `ConfirmDialog`, `TextInput`, `Field`.
+- `PinButton` (pin toggle for a sender or domain, used on Senders rows
+  and in the message preview; outline `pin` icon when unpinned, filled
+  `pinned` when pinned, disabled when a different pin covers the key) and
+  `PinnedConfirm` (the "Act on a pinned sender?" confirmation, a
+  `ConfirmDialog` with the action as its label). `BulkBar` takes a
+  `skipped` count and appends "N from pinned senders are skipped".
 - `QueryBar` (search pill, live count, syntax popover), `BulkBar` (floating
   action bar with More menu, folder submenu and the permanent-delete
   confirmation), `Toasts` (message toasts plus job toasts with progress,
