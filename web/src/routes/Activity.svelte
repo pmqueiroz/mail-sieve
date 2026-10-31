@@ -3,7 +3,8 @@
   import Button from '../lib/components/Button.svelte';
   import Pill, { type PillTone } from '../lib/components/Pill.svelte';
   import ProgressBar, { type ProgressTone } from '../lib/components/ProgressBar.svelte';
-  import { actionSentence, formatDuration, formatNumber, percent } from '../lib/format';
+  import { formatDuration, formatNumber, percent } from '../lib/format';
+  import { isUndoable, jobOrigin, jobTitle, undoJob } from '../lib/jobs';
   import { session } from '../lib/session.svelte';
   import { toasts } from '../lib/toasts.svelte';
   import type { Job, JobState, PendingLink } from '../lib/types';
@@ -36,14 +37,6 @@
     return session.accounts.find((candidate) => candidate.id === job.account_id);
   }
 
-  function title(job: Job): string {
-    const active = job.state === 'running' || job.state === 'queued';
-    if (job.kind === 'sync') return `${active ? 'Syncing' : 'Sync'} ${account(job)?.label ?? ''}`.trim();
-    const count = job.total || job.done;
-    if (job.kind === 'undo' || job.payload.origin === 'undo') return actionSentence('restore', count, active ? 'running' : 'past');
-    return actionSentence(job.payload.action, count, active ? 'running' : 'past');
-  }
-
   function subtitle(job: Job): string {
     if (job.error) return job.error;
     const label = account(job)?.label ?? '';
@@ -52,15 +45,8 @@
       if (job.state === 'done') return `${email} · ${formatNumber(job.done)} new`;
       return `${email} · ${account(job)?.last_synced_at ? 'checking for changes' : 'first sync'}`;
     }
-    const origin = job.payload.origin ?? '';
-    if (origin.startsWith('rule:')) return `Rule · ${label}`;
-    if (origin === 'unsubscribe') return `After unsubscribe · ${label}`;
-    if (origin === 'undo') return `Undo · ${label}`;
-    return label;
-  }
-
-  function undoable(job: Job): boolean {
-    return job.kind === 'action' && job.state === 'done' && job.payload.action !== 'delete' && job.payload.origin !== 'undo' && !job.payload.undone_by;
+    const origin = jobOrigin(job);
+    return origin ? `${origin} · ${label}` : label;
   }
 
   async function cancel(job: Job) {
@@ -69,8 +55,7 @@
 
   async function undo(job: Job) {
     try {
-      const { job_id } = await api.post<{ job_id: number }>(`/jobs/${job.id}/undo`);
-      toasts.track({ jobId: job_id, action: 'restore', count: job.done, who: account(job)?.label ?? 'this account', undoable: false });
+      await undoJob(job, account(job)?.label ?? 'this account');
     } catch (error) {
       toasts.show(errorMessage(error), 'error');
     }
@@ -114,7 +99,7 @@
     <div class="box-content grid min-h-32 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-8 border-b border-line py-4 wide:grid-cols-[--spacing(48)_minmax(0,1.4fr)_minmax(0,1fr)_--spacing(32)_--spacing(40)]">
       <span class="justify-self-start"><Pill {tone}>{label}</Pill></span>
       <span class="flex min-w-0 flex-col leading-row">
-        <span class="font-semibold">{title(job)}</span>
+        <span class="font-semibold">{jobTitle(job, account(job))}</span>
         <span class="text-xs {job.error ? 'text-bad' : 'text-ink3'}">{subtitle(job)}</span>
       </span>
       <span class="hidden items-center gap-5 wide:flex">
@@ -125,7 +110,7 @@
       <span class="justify-self-end">
         {#if job.state === 'running' || job.state === 'queued'}
           <Button size="sm" onclick={() => cancel(job)}>Cancel</Button>
-        {:else if undoable(job)}
+        {:else if isUndoable(job)}
           <Button size="sm" onclick={() => undo(job)}>Undo</Button>
         {/if}
       </span>
