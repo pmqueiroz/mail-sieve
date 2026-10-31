@@ -1,0 +1,17 @@
+---
+import PillLink from '../components/PillLink.astro';
+import Base from '../layouts/Base.astro';
+import { href } from '../lib/paths';
+---
+
+<Base title="Page not found · mail-sieve" description="This page does not exist." noindex>
+  <main class="mx-auto flex max-w-page flex-col gap-10 px-12 py-64">
+    <div class="font-mono text-sm text-accent">404</div>
+    <h1 class="m-0 text-section leading-tight font-bold tracking-display">This page got sieved.</h1>
+    <p class="m-0 text-lead text-ink-2">The link may be old, or the page moved.</p>
+    <div class="flex flex-wrap gap-6">
+      <PillLink href={href('/')} size="lg">Back to home</PillLink>
+      <PillLink href={href('/docs/intro/')} variant="outline" size="lg">Read the docs</PillLink>
+    </div>
+  </main>
+</Base>

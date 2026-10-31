@@ -1,0 +1,38 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends HTMLAttributes<'a'> {
+  variant?: 'primary' | 'outline';
+  size?: 'sm' | 'md' | 'lg';
+  as?: 'a' | 'span';
+  external?: boolean;
+}
+
+const { variant = 'primary', size = 'md', as: Tag = 'a', external = false, class: className, ...rest } = Astro.props;
+
+const sizes = {
+  sm: 'h-18 gap-4 px-8 text-sm',
+  md: 'h-20 gap-4 px-9 text-base',
+  lg: 'h-24 gap-4 px-12 text-body',
+};
+
+const variants = {
+  primary: 'bg-ink font-bold text-btn-ink hover:bg-white hover:text-btn-ink',
+  outline: 'border border-line-3 font-semibold text-ink hover:border-accent hover:text-ink',
+};
+
+const externalAttrs = external ? { target: '_blank', rel: 'noopener' } : {};
+---
+
+<Tag
+  class:list={[
+    'inline-flex shrink-0 items-center rounded-full no-underline transition-colors',
+    sizes[size],
+    variants[variant],
+    className,
+  ]}
+  {...externalAttrs}
+  {...rest}
+>
+  <slot />
+</Tag>

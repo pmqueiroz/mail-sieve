@@ -1,0 +1,32 @@
+---
+import Wordmark from './Wordmark.astro';
+import { href } from '../lib/paths';
+import { links } from '../lib/site';
+
+const items = [
+  { label: 'Docs', href: href('/docs/intro/'), external: false },
+  { label: 'GitHub', href: links.repo, external: true },
+  { label: 'Releases', href: links.releases, external: true },
+  { label: 'GitHub Sponsors', href: links.sponsors, external: true },
+  { label: 'Patreon', href: links.patreon, external: true },
+];
+---
+
+<footer class="border-t border-hairline">
+  <div class="mx-auto flex max-w-page flex-wrap items-center gap-x-16 gap-y-8 px-12 py-20 text-sm text-ink-3">
+    <Wordmark size="footer" />
+    <span>Self-hosted IMAP cleanup</span>
+    <div class="flex-1"></div>
+    <nav aria-label="Footer" class="flex flex-wrap gap-10">
+      {items.map((item) => (
+        <a
+          href={item.href}
+          class="text-ink-2 no-underline hover:text-ink"
+          {...(item.external ? { target: '_blank', rel: 'noopener' } : {})}
+        >
+          {item.label}
+        </a>
+      ))}
+    </nav>
+  </div>
+</footer>

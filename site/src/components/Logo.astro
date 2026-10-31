@@ -1,0 +1,12 @@
+---
+import Icon from './Icon.astro';
+import Wordmark from './Wordmark.astro';
+import { href } from '../lib/paths';
+---
+
+<a href={href('/')} class="flex items-center gap-5 text-ink no-underline hover:text-ink">
+  <span class="grid size-15 place-items-center rounded-sm bg-ink text-btn-ink">
+    <Icon name="mark" size={18} />
+  </span>
+  <Wordmark />
+</a>

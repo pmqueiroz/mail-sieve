@@ -1,0 +1,33 @@
+---
+import Icon from './Icon.astro';
+import Logo from './Logo.astro';
+import PillLink from './PillLink.astro';
+import { href } from '../lib/paths';
+import { links } from '../lib/site';
+
+interface Props {
+  section: 'home' | 'docs' | 'none';
+}
+
+const { section } = Astro.props;
+const ink = (on: boolean) => (on ? 'text-ink' : 'text-ink-2');
+const navLink = 'no-underline hover:text-ink';
+---
+
+<header class="sticky top-0 z-20 border-b border-hairline bg-header backdrop-blur-header">
+  <div class="mx-auto flex h-32 max-w-page items-center gap-8 px-12 wide:gap-14">
+    <Logo />
+    <nav aria-label="Primary" class="hidden gap-12 text-base font-medium wide:flex">
+      <a href={href('/#features')} class:list={[navLink, ink(section === 'home')]}>Features</a>
+      <a href={href('/docs/intro/')} class:list={[navLink, ink(section === 'docs')]}>Docs</a>
+      <a href={href('/#support')} class:list={[navLink, 'text-ink-2']}>Support</a>
+    </nav>
+    <div class="flex-1"></div>
+    <a href={href('/docs/intro/')} class:list={[navLink, 'text-base font-semibold wide:hidden', ink(section === 'docs')]}>Docs</a>
+    <PillLink href={links.repo} external variant="outline" size="sm" class="border-line-2 hover:border-line-4" aria-label="mail-sieve on GitHub">
+      <Icon name="github" />
+      <span class="hidden wide:inline">GitHub</span>
+    </PillLink>
+    <PillLink href={href('/#support')} size="sm">Donate</PillLink>
+  </div>
+</header>

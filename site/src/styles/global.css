@@ -1,0 +1,282 @@
+@import 'tailwindcss';
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('../../node_modules/@fontsource-variable/plus-jakarta-sans/files/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@theme {
+  --*: initial;
+
+  --spacing: 2px;
+
+  --breakpoint-wide: 860px;
+
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --color-page: #0c0c0f;
+  --color-band: #0f0f12;
+  --color-sunken: #121216;
+  --color-surface: #16161a;
+  --color-raised: #1c1c21;
+  --color-chip: #222228;
+  --color-hairline: #1f1f24;
+  --color-line: #26262c;
+  --color-line-2: #2e2e35;
+  --color-line-3: #3a3a42;
+  --color-line-4: #4a4a52;
+  --color-ink: #f1f1f4;
+  --color-ink-2: #a9a9b2;
+  --color-ink-3: #82828b;
+  --color-prose: #c9c9d0;
+  --color-code: #d8d8de;
+  --color-white: #ffffff;
+  --color-btn-ink: #131315;
+  --color-tile-ink: #1b1b1f;
+  --color-tile-blue: #8bb7f0;
+  --color-tile-orange: #f0b98b;
+  --color-tile-green: #b5e3a1;
+  --color-tile-violet: #c9c2f5;
+  --color-tile-pink: #f2a7b8;
+  --color-accent: #8f82e0;
+  --color-accent-soft: #c9c2f5;
+  --color-glow: #211f36;
+  --color-good: #5bd186;
+  --color-good-bg: #173022;
+  --color-warn: #e8b451;
+  --color-warn-bg: #2b2212;
+  --color-warn-line: #4a3a1a;
+  --color-note-bg: #17162a;
+  --color-note-line: #2c2850;
+  --color-note-ink: #d7d2fa;
+  --color-sponsor: #db61a2;
+  --color-header: rgb(12 12 15 / 0.85);
+
+  --text-label: 11px;
+  --text-xs: 12px;
+  --text-code: 12.5px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-body: 15px;
+  --text-md: 16px;
+  --text-lead: 17px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 22px;
+  --text-3xl: 28px;
+  --text-hero-lead: clamp(17px, 1.6vw, 20px);
+  --text-doc-title: clamp(32px, 4vw, 44px);
+  --text-section: clamp(32px, 4.4vw, 52px);
+  --text-section-sm: clamp(32px, 4.4vw, 48px);
+  --text-hero: clamp(44px, 7.2vw, 88px);
+
+  --leading-hero: 0.98;
+  --leading-tight: 1.05;
+  --leading-heading: 1.1;
+  --leading-row: 1.3;
+  --leading-quote: 1.35;
+  --leading-lead: 1.55;
+  --leading-snug: 1.15;
+  --leading-body: 1.6;
+  --leading-code: 1.75;
+
+  --tracking-hero: -0.045em;
+  --tracking-display: -0.035em;
+  --tracking-title: -0.025em;
+  --tracking-heading: -0.02em;
+  --tracking-soft: -0.01em;
+  --tracking-label: 0.04em;
+
+  --radius-bar: 2px;
+  --radius-sm: 8px;
+  --radius-md: 9px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --radius-3xl: 20px;
+  --radius-card: 24px;
+  --radius-full: 999px;
+
+  --shadow-demo: 0 40px 120px rgb(0 0 0 / 0.55), 0 0 0 6px rgb(143 130 224 / 0.06);
+
+  --container-page: 1200px;
+  --container-article: 720px;
+  --container-hero: 980px;
+  --container-heading: 760px;
+  --container-lead: 640px;
+  --container-intro: 600px;
+
+  --blur-header: 14px;
+}
+
+@utility bg-hero-glow {
+  background: radial-gradient(ellipse 55% 60% at 30% 0%, var(--color-glow) 0%, transparent 70%);
+}
+
+@utility pt-hero {
+  padding-top: clamp(64px, 10vw, 120px);
+}
+
+@utility p-card {
+  padding: clamp(24px, 3vw, 40px);
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-padding-top: --spacing(36);
+  }
+
+  body {
+    @apply bg-page font-sans text-body leading-body text-ink antialiased;
+  }
+
+  a {
+    @apply text-ink underline decoration-line-4 underline-offset-3;
+  }
+
+  a:hover {
+    @apply text-accent-soft decoration-accent;
+  }
+
+  ::selection {
+    @apply bg-accent text-page;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+}
+
+@layer components {
+  .doc > * + * {
+    @apply mt-9;
+  }
+
+  .doc h2 {
+    @apply mt-21 text-2xl font-bold tracking-heading;
+  }
+
+  .doc > h2:first-child {
+    @apply mt-12;
+  }
+
+  .doc h3 {
+    @apply mt-15 text-lg font-semibold tracking-soft;
+  }
+
+  .doc p,
+  .doc ul,
+  .doc ol {
+    @apply text-pretty text-prose;
+  }
+
+  .doc ul,
+  .doc ol {
+    @apply flex flex-col gap-3 pl-10;
+  }
+
+  .doc ul {
+    @apply list-disc;
+  }
+
+  .doc ol {
+    @apply list-decimal;
+  }
+
+  .doc li::marker {
+    @apply text-ink-3;
+  }
+
+  .doc strong {
+    @apply font-semibold text-ink;
+  }
+
+  .doc :not(pre) > code {
+    @apply rounded-sm bg-chip px-3 py-1 font-mono text-code text-ink;
+  }
+
+  .doc pre {
+    @apply overflow-x-auto rounded-xl border border-line bg-sunken px-10 py-9 font-mono text-sm leading-code text-code;
+  }
+
+  .doc table {
+    @apply block w-full overflow-hidden rounded-xl border border-line text-base;
+  }
+
+  .doc thead {
+    @apply sr-only;
+  }
+
+  .doc tbody {
+    @apply block;
+  }
+
+  .doc tr {
+    @apply grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-8 border-t border-line px-8 py-6;
+  }
+
+  .doc tbody tr:first-child {
+    @apply border-t-0;
+  }
+
+  .doc td {
+    @apply block text-pretty text-ink-2;
+  }
+
+  .doc td:first-child {
+    @apply text-ink;
+  }
+
+  .doc td code {
+    @apply bg-transparent p-0 font-mono text-code text-ink wrap-anywhere;
+  }
+
+  .doc .callout {
+    @apply rounded-lg border px-9 py-7 text-base text-pretty;
+  }
+
+  .doc .callout > * + * {
+    @apply mt-4;
+  }
+
+  .doc .callout p {
+    @apply text-inherit;
+  }
+
+  .doc .callout-note {
+    @apply border-note-line bg-note-bg text-note-ink;
+  }
+
+  .doc .callout-warning {
+    @apply border-warn-line bg-warn-bg text-warn;
+  }
+}

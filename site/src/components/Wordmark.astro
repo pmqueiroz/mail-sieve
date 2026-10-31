@@ -1,0 +1,11 @@
+---
+interface Props {
+  size?: 'header' | 'footer';
+}
+
+const { size = 'header' } = Astro.props;
+---
+
+<span class:list={['leading-none tracking-display', size === 'header' ? 'text-xl' : 'text-md']}>
+  <span class="font-normal text-ink-2">mail</span><span class="font-bold text-ink">sieve</span>
+</span>
