@@ -1,29 +1,51 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { runAction } from '../lib/actions';
   import { api, errorMessage, withParams } from '../lib/api';
-  import ActionBar from '../lib/components/ActionBar.svelte';
-  import Badge from '../lib/components/Badge.svelte';
-  import BulkActions from '../lib/components/BulkActions.svelte';
+  import Avatar from '../lib/components/Avatar.svelte';
+  import BulkBar from '../lib/components/BulkBar.svelte';
   import Button from '../lib/components/Button.svelte';
-  import EmptyState from '../lib/components/EmptyState.svelte';
+  import Checkbox from '../lib/components/Checkbox.svelte';
+  import Chip from '../lib/components/Chip.svelte';
+  import Pill from '../lib/components/Pill.svelte';
   import QueryBar from '../lib/components/QueryBar.svelte';
   import Segmented from '../lib/components/Segmented.svelte';
   import UnsubscribeDialog from '../lib/components/UnsubscribeDialog.svelte';
   import VirtualList from '../lib/components/VirtualList.svelte';
-  import { actionLabel, formatBytes, formatDate, formatNumber } from '../lib/format';
-  import { combine, groupQuery } from '../lib/query';
+  import { formatBytes, formatNumber, formatShortDate } from '../lib/format';
+  import { combine, groupQuery, hasTerm, quote, toggleTerm } from '../lib/query';
   import { router } from '../lib/router.svelte';
   import { session } from '../lib/session.svelte';
   import { toasts } from '../lib/toasts.svelte';
   import type { Group, GroupBy, SortBy } from '../lib/types';
+  import { unsubscribeBadge } from '../lib/unsubscribe';
 
   const PAGE = 500;
+  const ROW_CONTENT_HEIGHT = 52;
+  const HAIRLINE = 1;
+  const ROW_HEIGHT = ROW_CONTENT_HEIGHT + HAIRLINE;
+  const COLUMNS = 'grid-cols-[--spacing(9)_minmax(0,1fr)_--spacing(32)_--spacing(32)] wide:grid-cols-[--spacing(9)_minmax(0,2.4fr)_--spacing(42)_--spacing(36)_--spacing(38)_--spacing(35)_--spacing(70)_--spacing(30)]';
+  const CHIPS: [string, string][] = [
+    ['Unread', 'is:unread'],
+    ['Older than a year', 'older_than:1y'],
+    ['Newsletters', 'has:list'],
+    ['Large', 'larger:5mb'],
+    ['Can unsubscribe', 'has:unsubscribe'],
+  ];
+  const SORTS: [SortBy, string][] = [
+    ['count', 'Most messages'],
+    ['size', 'Largest'],
+    ['unread', 'Most unread'],
+    ['recent', 'Most recent'],
+  ];
+  const GROUP_LABELS: Record<GroupBy, string> = { sender: 'Sender', domain: 'Domain', list: 'Mailing list' };
+  const GROUP_PLURALS: Record<GroupBy, string> = { sender: 'senders', domain: 'domains', list: 'lists' };
 
   let { accountId }: { accountId: number } = $props();
 
   let groupBy = $state<GroupBy>('sender');
   let sortBy = $state<SortBy>('count');
-  let filter = $state('');
+  let filter = $state(router.params.get('q') ?? '');
   let groups = $state<Group[]>([]);
   let loading = $state(false);
   let exhausted = $state(false);
@@ -34,7 +56,31 @@
   const selection = $derived(Object.values(selected));
   const selectedMessages = $derived(selection.reduce((sum, group) => sum + group.message_count, 0));
   const selectedBytes = $derived(selection.reduce((sum, group) => sum + group.total_size, 0));
+  const who = $derived(selection.length === 1 ? (selection[0]!.name ?? selection[0]!.key) : `${formatNumber(selection.length)} ${GROUP_PLURALS[groupBy]}`);
   const resetKey = $derived(`${accountId}|${groupBy}|${sortBy}|${filter}`);
+
+  $effect(() => {
+    const fromRoute = router.params.get('q') ?? '';
+    untrack(() => {
+      if (fromRoute !== filter) filter = fromRoute;
+    });
+  });
+
+  $effect(() => {
+    const key = router.params.get('select');
+    if (!key) return;
+    untrack(() => preselect(key));
+  });
+
+  async function preselect(key: string) {
+    try {
+      const [group] = await api.get<Group[]>(withParams(`/accounts/${accountId}/groups`, { q: `from:${quote(key)}`, group: 'sender', limit: 1 }));
+      groupBy = 'sender';
+      if (group) selected = { [group.key]: group };
+    } catch (error) {
+      toasts.show(errorMessage(error), 'error');
+    }
+  }
 
   async function load(reset: boolean) {
     if (loading && !reset) return;
@@ -42,9 +88,7 @@
     loading = true;
     try {
       const offset = reset ? 0 : groups.length;
-      const page = await api.get<Group[]>(
-        withParams(`/accounts/${accountId}/groups`, { q: filter, group: groupBy, sort: sortBy, limit: PAGE, offset }),
-      );
+      const page = await api.get<Group[]>(withParams(`/accounts/${accountId}/groups`, { q: filter, group: groupBy, sort: sortBy, limit: PAGE, offset }));
       if (current !== generation) return;
       groups = reset ? page : [...groups, ...page];
       exhausted = page.length < PAGE;
@@ -58,7 +102,7 @@
   $effect(() => {
     void resetKey;
     untrack(() => {
-      selected = {};
+      if (!router.params.get('select')) selected = {};
       load(true);
     });
   });
@@ -73,176 +117,105 @@
   }
 
   function toggleAll() {
-    if (selection.length > 0) selected = {};
+    if (selection.length > 0 && selection.length === groups.length) selected = {};
     else selected = Object.fromEntries(groups.map((group) => [group.key, group]));
   }
 
-  function queryFor(group: Group) {
-    return combine(filter, groupQuery(groupBy, group.key));
-  }
-
   async function run(action: string, confirm: boolean) {
-    const queries = selection.map(queryFor);
-    const response = await api.post<{ job_id: number | null }>(`/accounts/${accountId}/actions`, { queries, action, confirm });
-    if (response.job_id === null) toasts.show('Nothing to do, no messages matched.');
-    else toasts.show(`${actionLabel(action)} queued for ${formatNumber(selectedMessages)} messages.`, 'success');
+    const queries = selection.map((group) => combine(filter, groupQuery(groupBy, group.key)));
+    await runAction(accountId, { queries }, action, confirm, { count: selectedMessages, who });
     selected = {};
-  }
-
-  function unsubscribeLabel(group: Group): { tone: 'success' | 'warning' | 'danger' | 'accent'; text: string } | null {
-    if (group.unsubscribe_status === 'completed') return { tone: 'success', text: 'unsubscribed' };
-    if (group.unsubscribe_status === 'link_opened') return { tone: 'warning', text: 'link opened' };
-    if (group.unsubscribe_status === 'failed') return { tone: 'danger', text: 'unsubscribe failed' };
-    if (group.unsub_one_click) return { tone: 'accent', text: 'one-click' };
-    if (group.unsub_http || group.unsub_mailto) return { tone: 'accent', text: 'unsubscribe' };
-    return null;
   }
 </script>
 
-<section class="page">
-  <div class="page-header">
-    <h1>Senders</h1>
-    <div class="toolbar">
-      <Segmented
-        label="Group by"
-        bind:value={groupBy}
-        options={[
-          { value: 'sender', label: 'Sender' },
-          { value: 'domain', label: 'Domain' },
-          { value: 'list', label: 'Mailing list' },
-        ]} />
-      <select class="sort" aria-label="Sort by" bind:value={sortBy}>
-        <option value="count">Most messages</option>
-        <option value="size">Largest</option>
-        <option value="unread">Most unread</option>
-        <option value="recent">Most recent</option>
-      </select>
-    </div>
+<div class="flex flex-col gap-7 pt-2">
+  <QueryBar {accountId} bind:value={filter} large placeholder="Search senders, or try older_than:1y is:unread" />
+  <div class="flex flex-wrap items-center gap-4">
+    {#each CHIPS as [label, term] (term)}
+      <Chip active={hasTerm(filter, term)} surface onclick={() => (filter = toggleTerm(filter, term))}>{label}</Chip>
+    {/each}
+    <div class="flex-1"></div>
+    <Segmented
+      label="Group by"
+      dense
+      bind:value={groupBy}
+      options={[
+        { value: 'sender', label: 'Sender' },
+        { value: 'domain', label: 'Domain' },
+        { value: 'list', label: 'Mailing list' },
+      ]} />
   </div>
-
-  <div class="toolbar">
-    <QueryBar {accountId} bind:value={filter} placeholder="Narrow down: older_than:6m has:unsubscribe" />
+  <div class="flex flex-wrap items-center gap-5 text-sm text-ink2" role="radiogroup" aria-label="Sort by">
+    <span>Sort by</span>
+    {#each SORTS as [value, label] (value)}
+      <button
+        type="button"
+        role="radio"
+        aria-checked={sortBy === value}
+        class="border-0 border-b-2 bg-transparent px-1 py-2 text-sm font-semibold {sortBy === value ? 'border-ink text-ink' : 'border-transparent text-ink3'}"
+        onclick={() => (sortBy = value)}>{label}</button>
+    {/each}
   </div>
-
-  <ActionBar count={selectedMessages} bytes={selectedBytes} onclear={() => (selected = {})}>
-    <BulkActions {accountId} count={selectedMessages} onrun={run} />
-    {#if groupBy === 'sender'}
-      <Button size="sm" onclick={() => (unsubscribeOpen = true)}>Unsubscribe…</Button>
-    {/if}
-  </ActionBar>
-
-  <div class="table card">
-    <div class="head">
-      <span class="check"><input type="checkbox" aria-label="Select all" checked={selection.length > 0 && selection.length === groups.length} indeterminate={selection.length > 0 && selection.length < groups.length} onchange={toggleAll} /></span>
-      <span class="who">{groupBy === 'sender' ? 'Sender' : groupBy === 'domain' ? 'Domain' : 'List'}</span>
-      <span class="num">Messages</span>
-      <span class="num">Unread</span>
-      <span class="num">Size</span>
-      <span class="date">Latest</span>
-      <span class="tags"></span>
-      <span class="open"></span>
+  <div class="border-t border-line">
+    <div class="box-content grid h-20 items-center gap-7 border-b border-line text-xs font-medium text-ink3 {COLUMNS}">
+      <Checkbox label="Select all" checked={groups.length > 0 && selection.length === groups.length} partial={selection.length > 0} onchange={toggleAll} />
+      <span>{GROUP_LABELS[groupBy]}</span>
+      <span class="text-right">Messages</span>
+      <span class="hidden text-right wide:inline">Unread</span>
+      <span class="text-right">Size</span>
+      <span class="hidden wide:inline">Latest</span>
+      <span class="hidden wide:inline">Unsubscribe</span>
+      <span class="hidden wide:inline"></span>
     </div>
-    {#if groups.length === 0 && !loading}
-      <EmptyState title="No senders match">
-        <p>{session.current?.last_synced_at ? 'Try a different filter.' : 'The first sync is still running, results appear as messages arrive.'}</p>
-      </EmptyState>
-    {:else}
-      <VirtualList items={groups} key={(group) => group.key} {resetKey} onEndReached={() => !exhausted && load(false)}>
-        {#snippet row(group: Group)}
-          {@const badge = unsubscribeLabel(group)}
-          <div class="line" class:selected={!!selected[group.key]}>
-            <span class="check"><input type="checkbox" aria-label="Select {group.key}" checked={!!selected[group.key]} onchange={() => toggle(group)} /></span>
-            <span class="who">
-              {#if groupBy === 'sender'}
-                <span class="name truncate">{group.name ?? group.key}</span>
-                <span class="key truncate muted">{group.key}</span>
-              {:else}
-                <span class="name truncate">{group.key}</span>
-                <span class="key truncate muted">{group.sender_count === 1 ? (group.name ?? '1 sender') : `${formatNumber(group.sender_count)} senders`}</span>
-              {/if}
+    <VirtualList items={groups} key={(group) => group.key} rowHeight={ROW_HEIGHT} {resetKey} onEndReached={() => !exhausted && load(false)}>
+      {#snippet row(group: Group)}
+        {@const on = !!selected[group.key]}
+        {@const badge = groupBy === 'domain' ? null : unsubscribeBadge(group)}
+        {@const name = groupBy === 'sender' ? (group.name ?? group.key) : group.key}
+        <div
+          role="row"
+          tabindex="-1"
+          aria-selected={on}
+          class="box-content grid h-26 cursor-pointer items-center gap-7 border-b border-line {COLUMNS} {on ? 'bg-surface2' : 'bg-transparent'}"
+          onclick={() => toggle(group)}
+          onkeydown={(event) => event.key === ' ' && (event.preventDefault(), toggle(group))}>
+          <Checkbox label="Select {name}" checked={on} />
+          <div class="flex min-w-0 items-center gap-5">
+            <Avatar label={name} seed={group.key} size="sm" />
+            <span class="flex min-w-0 flex-col leading-snug">
+              <span class="truncate font-semibold">{name}</span>
+              <span class="truncate text-xs text-ink3">
+                {#if groupBy === 'sender'}{group.key}{:else if groupBy === 'list'}list: {group.list_id ?? group.key}{:else}{formatNumber(group.sender_count)} {group.sender_count === 1 ? 'sender' : 'senders'}{/if}
+              </span>
             </span>
-            <span class="num strong">{formatNumber(group.message_count)}</span>
-            <span class="num">{group.unread_count ? formatNumber(group.unread_count) : ''}</span>
-            <span class="num muted">{formatBytes(group.total_size)}</span>
-            <span class="date muted">{formatDate(group.last_date)}</span>
-            <span class="tags">{#if badge}<Badge tone={badge.tone}>{badge.text}</Badge>{/if}</span>
-            <span class="open"><Button size="sm" variant="ghost" onclick={() => router.go('messages', { q: queryFor(group) })}>View</Button></span>
           </div>
-        {/snippet}
-      </VirtualList>
+          <span class="text-right font-semibold tabular-nums">{formatNumber(group.message_count)}</span>
+          <span class="hidden text-right text-ink2 tabular-nums wide:inline">{formatNumber(group.unread_count)}</span>
+          <span class="text-right text-ink2 tabular-nums">{formatBytes(group.total_size)}</span>
+          <span class="hidden text-ink2 wide:inline">{formatShortDate(group.last_date)}</span>
+          <span class="hidden wide:inline">{#if badge}<Pill tone={badge.tone} size="badge">{badge.label}</Pill>{/if}</span>
+          <span class="hidden wide:grid">
+            <Button size="xs" class="bg-surface" onclick={(event) => (event.stopPropagation(), router.go('messages', { q: combine(filter, groupQuery(groupBy, group.key)) }))}>View</Button>
+          </span>
+        </div>
+      {/snippet}
+    </VirtualList>
+    {#if groups.length === 0 && !loading}
+      <div class="py-24 text-center text-ink2">
+        {session.current?.last_synced_at ? 'Nothing matches this search. Try removing a filter.' : 'The first sync is still running. Senders appear as messages arrive.'}
+      </div>
     {/if}
+    <div class="h-48"></div>
   </div>
-</section>
+</div>
 
-<UnsubscribeDialog bind:open={unsubscribeOpen} {accountId} senders={selection} ondone={() => ((selected = {}), load(true))} />
+<BulkBar
+  {accountId}
+  count={selectedMessages}
+  bytes={selectedBytes}
+  {who}
+  onrun={run}
+  onunsubscribe={groupBy === 'sender' ? () => (unsubscribeOpen = true) : undefined}
+  onclear={() => (selected = {})} />
 
-<style>
-  .sort {
-    width: auto;
-  }
-  .table {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .head,
-  .line {
-    display: grid;
-    grid-template-columns: 40px minmax(200px, 1fr) 90px 80px 90px 110px 130px 70px;
-    align-items: center;
-    width: 100%;
-    padding: 0 var(--space-3);
-    gap: var(--space-2);
-  }
-  .head {
-    height: 38px;
-    border-bottom: 1px solid var(--color-border);
-    font-size: var(--text-xs);
-    font-weight: 650;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--color-text-muted);
-  }
-  .line {
-    border-bottom: 1px solid var(--color-border);
-  }
-  .line:hover {
-    background: var(--color-surface-muted);
-  }
-  .line.selected {
-    background: var(--color-selected);
-  }
-  .who {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    line-height: 1.25;
-  }
-  .name {
-    font-weight: 550;
-  }
-  .key {
-    font-size: var(--text-xs);
-  }
-  .num {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-  .strong {
-    font-weight: 600;
-  }
-  .date {
-    text-align: right;
-    font-size: var(--text-sm);
-  }
-  .tags {
-    display: flex;
-    justify-content: flex-end;
-  }
-  .open {
-    display: flex;
-    justify-content: flex-end;
-  }
-</style>
+<UnsubscribeDialog bind:open={unsubscribeOpen} {accountId} senders={selection} {who} count={selectedMessages} ondone={() => ((selected = {}), load(true))} />
