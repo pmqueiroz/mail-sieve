@@ -55,11 +55,39 @@ The repository also ships this file as `docker/compose.yml`, where `MAIL_SIEVE_P
 The data volume holds `secret.key`, which encrypts your stored credentials. Back it up. Without it, saved accounts must be re-added.
 :::
 
+## Standalone binary
+
+No Docker? Download the archive for your platform from the [latest release](https://github.com/pmqueiroz/mail-sieve/releases/latest).
+
+| Platform | Archive ends with |
+| --- | --- |
+| Linux x86_64 | `x86_64-unknown-linux-musl.tar.gz` |
+| Linux ARM64 | `aarch64-unknown-linux-musl.tar.gz` |
+| macOS, Apple silicon | `aarch64-apple-darwin.tar.gz` |
+| macOS, Intel | `x86_64-apple-darwin.tar.gz` |
+| Windows x86_64 | `x86_64-pc-windows-msvc.zip` |
+
+```sh
+tar xzf mail-sieve-*-x86_64-unknown-linux-musl.tar.gz
+cd mail-sieve-*-x86_64-unknown-linux-musl
+./mail-sieve serve
+```
+
+It is a single file with the web UI built in. It keeps its database and `secret.key` in `./data` and listens on `127.0.0.1:8080`; `MAIL_SIEVE_DATA_DIR` and `MAIL_SIEVE_BIND` change both (see [Configuration](../configuration/)). The Linux builds are fully static and run on any distribution.
+
+To check a download, compare it with `SHA256SUMS` from the same release, or verify where it was built with `gh attestation verify <archive> --owner pmqueiroz`.
+
+:::note
+The binaries are not code signed yet. On macOS, clear the download quarantine with `xattr -d com.apple.quarantine mail-sieve`. On Windows, SmartScreen may warn on first run: choose More info, then Run anyway.
+:::
+
 ## Updating
 
 ```sh
 docker compose pull
 docker compose up -d
 ```
+
+With the standalone binary, stop it, replace the file with the one from the new release and start it again. The data folder carries over.
 
 Database migrations run automatically on start. Back up the data volume before upgrading.

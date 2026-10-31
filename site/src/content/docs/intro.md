@@ -16,6 +16,6 @@ It connects to one or more mail accounts over IMAP, builds a local index of mess
 
 ## Requirements
 
-- Docker on `amd64` or `arm64`, or a Rust toolchain to build the binary yourself
+- Docker on `amd64` or `arm64`, or the standalone binary for Linux, macOS or Windows
 - An IMAP account: Gmail, Outlook / Microsoft 365, iCloud, Yahoo, Fastmail, Dovecot or any IMAP4rev1 server
 - A little disk for the index: about 1 to 2 KB of headers per message
