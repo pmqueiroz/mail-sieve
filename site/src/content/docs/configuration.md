@@ -29,5 +29,7 @@ mail-sieve serve                 # default
 mail-sieve accounts              # list accounts
 mail-sieve sync --account 1      # one-shot sync with timing
 mail-sieve set-password          # reset the admin password from stdin
+mail-sieve rules export --account 1        # print the account's rules as YAML
+mail-sieve rules import --account 1 FILE   # add rules from a file (--replace, --dry-run)
 mail-sieve health                # exit 0 when the server answers
 ```
