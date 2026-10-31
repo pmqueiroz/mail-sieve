@@ -77,6 +77,7 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/plugins/{id}/files/{*path}", get(plugins::file))
         .route("/ai/models", post(plugins::ai_models))
+        .route("/ai/complete", post(plugins::ai_complete))
         .route("/auth/password", post(auth::change_password))
         .layer(from_fn_with_state(state.clone(), require_session));
     let public = Router::new()

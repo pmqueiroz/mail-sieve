@@ -10,8 +10,10 @@ use crate::ai::{self, ProviderConnection, ProviderKind};
 use crate::error::{Error, Result};
 use crate::plugins::{self, CommunityPlugin, PluginConfig, SecretChanges, Secrets, States};
 
-const API_KEY_SECRET: &str = "api_key";
 use crate::state::AppState;
+
+const API_KEY_SECRET: &str = "api_key";
+const DEFAULT_MAX_TOKENS: u32 = 1024;
 
 #[derive(Serialize)]
 pub struct PluginList {
@@ -132,30 +134,73 @@ pub struct ModelsResponse {
     models: Vec<String>,
 }
 
+async fn resolve_key(
+    state: &AppState,
+    typed: Option<String>,
+    plugin: Option<String>,
+) -> Result<Option<String>> {
+    let typed = typed
+        .map(|key| key.trim().to_string())
+        .filter(|key| !key.is_empty());
+    match (typed, plugin) {
+        (Some(key), _) => Ok(Some(key)),
+        (None, Some(plugin)) => {
+            plugins::check_id(&plugin)?;
+            Ok(stored_secrets(state, &plugin)
+                .await?
+                .1
+                .remove(API_KEY_SECRET))
+        }
+        (None, None) => Ok(None),
+    }
+}
+
 pub async fn ai_models(
     State(state): State<AppState>,
     Json(body): Json<ModelsBody>,
 ) -> Result<Json<ModelsResponse>> {
-    let typed = body
-        .api_key
-        .map(|key| key.trim().to_string())
-        .filter(|key| !key.is_empty());
-    let api_key = match (typed, body.plugin) {
-        (Some(key), _) => Some(key),
-        (None, Some(plugin)) => {
-            plugins::check_id(&plugin)?;
-            stored_secrets(&state, &plugin)
-                .await?
-                .1
-                .remove(API_KEY_SECRET)
-        }
-        (None, None) => None,
-    };
     let connection = ProviderConnection {
         kind: body.kind,
         base_url: body.base_url,
-        api_key,
+        api_key: resolve_key(&state, body.api_key, body.plugin).await?,
     };
     let models = ai::list_models(&state.http, &connection).await?;
     Ok(Json(ModelsResponse { models }))
+}
+
+#[derive(Deserialize)]
+pub struct CompleteBody {
+    kind: ProviderKind,
+    base_url: String,
+    model: String,
+    api_key: Option<String>,
+    plugin: Option<String>,
+    #[serde(default)]
+    system: String,
+    prompt: String,
+    max_tokens: Option<u32>,
+}
+
+#[derive(Serialize)]
+pub struct CompleteResponse {
+    text: String,
+}
+
+pub async fn ai_complete(
+    State(state): State<AppState>,
+    Json(body): Json<CompleteBody>,
+) -> Result<Json<CompleteResponse>> {
+    let connection = ProviderConnection {
+        kind: body.kind,
+        base_url: body.base_url,
+        api_key: resolve_key(&state, body.api_key, body.plugin).await?,
+    };
+    let completion = ai::Completion {
+        model: body.model,
+        system: body.system,
+        prompt: body.prompt,
+        max_tokens: body.max_tokens.unwrap_or(DEFAULT_MAX_TOKENS),
+    };
+    let text = ai::complete(&state.http, &connection, &completion).await?;
+    Ok(Json(CompleteResponse { text }))
 }

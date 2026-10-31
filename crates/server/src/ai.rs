@@ -2,12 +2,16 @@ use std::time::Duration;
 
 use reqwest::Url;
 use serde::Deserialize;
+use serde_json::{Value, json};
 
 use crate::error::{Error, Result};
 
 const ANTHROPIC_VERSION: &str = "2026-10-21";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 const MAX_ERROR_LEN: usize = 300;
+const COMPLETION_TIMEOUT: Duration = Duration::from_secs(90);
+const MAX_PROMPT_BYTES: usize = 100 * 1024;
+pub const MAX_TOKENS: u32 = 4096;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -32,12 +36,8 @@ struct ModelEntry {
     id: String,
 }
 
-pub fn models_url(kind: ProviderKind, base_url: &str) -> Result<Url> {
+fn endpoint(base_url: &str, path: &str) -> Result<Url> {
     let base = base_url.trim().trim_end_matches('/');
-    let path = match kind {
-        ProviderKind::Anthropic => "/v1/models?limit=1000",
-        ProviderKind::Openai => "/models",
-    };
     let url = Url::parse(&format!("{base}{path}"))
         .map_err(|_| Error::BadRequest(format!("`{base_url}` is not a valid URL")))?;
     if !matches!(url.scheme(), "http" | "https")
@@ -49,6 +49,22 @@ pub fn models_url(kind: ProviderKind, base_url: &str) -> Result<Url> {
         ));
     }
     Ok(url)
+}
+
+pub fn models_url(kind: ProviderKind, base_url: &str) -> Result<Url> {
+    let path = match kind {
+        ProviderKind::Anthropic => "/v1/models?limit=1000",
+        ProviderKind::Openai => "/models",
+    };
+    endpoint(base_url, path)
+}
+
+pub fn completion_url(kind: ProviderKind, base_url: &str) -> Result<Url> {
+    let path = match kind {
+        ProviderKind::Anthropic => "/v1/messages",
+        ProviderKind::Openai => "/chat/completions",
+    };
+    endpoint(base_url, path)
 }
 
 pub fn parse_models(body: &str) -> Result<Vec<String>> {
@@ -87,20 +103,21 @@ fn describe(error: reqwest::Error) -> String {
     message
 }
 
-pub async fn list_models(
-    http: &reqwest::Client,
+fn authorize(
+    request: reqwest::RequestBuilder,
     connection: &ProviderConnection,
-) -> Result<Vec<String>> {
-    let url = models_url(connection.kind, &connection.base_url)?;
-    let mut request = http.get(url).timeout(REQUEST_TIMEOUT);
+) -> reqwest::RequestBuilder {
     let key = connection.api_key.as_deref().filter(|key| !key.is_empty());
-    request = match (connection.kind, key) {
+    match (connection.kind, key) {
         (ProviderKind::Anthropic, key) => request
             .header("anthropic-version", ANTHROPIC_VERSION)
             .header("x-api-key", key.unwrap_or_default()),
         (ProviderKind::Openai, Some(key)) => request.bearer_auth(key),
         (ProviderKind::Openai, None) => request,
-    };
+    }
+}
+
+async fn send(request: reqwest::RequestBuilder) -> Result<String> {
     let response = request
         .send()
         .await
@@ -113,7 +130,105 @@ pub async fn list_models(
     if !status.is_success() {
         return Err(upstream_error(status, &body));
     }
-    parse_models(&body)
+    Ok(body)
+}
+
+pub async fn list_models(
+    http: &reqwest::Client,
+    connection: &ProviderConnection,
+) -> Result<Vec<String>> {
+    let url = models_url(connection.kind, &connection.base_url)?;
+    let request = authorize(http.get(url).timeout(REQUEST_TIMEOUT), connection);
+    parse_models(&send(request).await?)
+}
+
+pub struct Completion {
+    pub model: String,
+    pub system: String,
+    pub prompt: String,
+    pub max_tokens: u32,
+}
+
+impl Completion {
+    pub fn validate(&self) -> Result<()> {
+        if self.model.trim().is_empty() {
+            return Err(Error::BadRequest("choose a model".into()));
+        }
+        if self.prompt.trim().is_empty() {
+            return Err(Error::BadRequest("the prompt is empty".into()));
+        }
+        if self.prompt.len() + self.system.len() > MAX_PROMPT_BYTES {
+            return Err(Error::BadRequest(format!(
+                "the prompt is larger than {} KB",
+                MAX_PROMPT_BYTES / 1024
+            )));
+        }
+        Ok(())
+    }
+}
+
+pub fn completion_body(kind: ProviderKind, completion: &Completion) -> Value {
+    let model = completion.model.trim();
+    let max_tokens = completion.max_tokens.clamp(1, MAX_TOKENS);
+    match kind {
+        ProviderKind::Anthropic => {
+            let mut body = json!({
+                "model": model,
+                "max_tokens": max_tokens,
+                "messages": [{ "role": "user", "content": completion.prompt }],
+            });
+            if !completion.system.trim().is_empty() {
+                body["system"] = json!(completion.system);
+            }
+            body
+        }
+        ProviderKind::Openai => {
+            let mut messages = Vec::new();
+            if !completion.system.trim().is_empty() {
+                messages.push(json!({ "role": "system", "content": completion.system }));
+            }
+            messages.push(json!({ "role": "user", "content": completion.prompt }));
+            json!({ "model": model, "max_tokens": max_tokens, "messages": messages })
+        }
+    }
+}
+
+pub fn parse_completion(kind: ProviderKind, body: &str) -> Result<String> {
+    let invalid = || Error::Upstream("the provider did not return a completion".into());
+    let value: Value = serde_json::from_str(body).map_err(|_| invalid())?;
+    let text = match kind {
+        ProviderKind::Anthropic => value
+            .get("content")
+            .and_then(Value::as_array)
+            .map(|blocks| {
+                blocks
+                    .iter()
+                    .filter(|block| block.get("type").and_then(Value::as_str) == Some("text"))
+                    .filter_map(|block| block.get("text").and_then(Value::as_str))
+                    .collect::<String>()
+            }),
+        ProviderKind::Openai => value
+            .pointer("/choices/0/message/content")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+    };
+    text.ok_or_else(invalid)
+}
+
+pub async fn complete(
+    http: &reqwest::Client,
+    connection: &ProviderConnection,
+    completion: &Completion,
+) -> Result<String> {
+    completion.validate()?;
+    let url = completion_url(connection.kind, &connection.base_url)?;
+    let request = authorize(
+        http.post(url)
+            .timeout(COMPLETION_TIMEOUT)
+            .json(&completion_body(connection.kind, completion)),
+        connection,
+    );
+    parse_completion(connection.kind, &send(request).await?)
 }
 
 #[cfg(test)]
@@ -157,5 +272,67 @@ mod tests {
             r#"{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}"#,
         );
         assert!(error.to_string().contains("invalid x-api-key"));
+    }
+
+    #[test]
+    fn builds_completion_requests_per_provider() {
+        assert_eq!(
+            completion_url(ProviderKind::Anthropic, "https://api.anthropic.com")
+                .unwrap()
+                .as_str(),
+            "https://api.anthropic.com/v1/messages"
+        );
+        assert_eq!(
+            completion_url(ProviderKind::Openai, "http://ollama:11434/v1/")
+                .unwrap()
+                .as_str(),
+            "http://ollama:11434/v1/chat/completions"
+        );
+        let completion = Completion {
+            model: " claude-opus-5-5 ".into(),
+            system: "Be brief.".into(),
+            prompt: "Hi".into(),
+            max_tokens: 100_000,
+        };
+        let anthropic = completion_body(ProviderKind::Anthropic, &completion);
+        assert_eq!(anthropic["model"], "claude-opus-5-5");
+        assert_eq!(anthropic["system"], "Be brief.");
+        assert_eq!(anthropic["max_tokens"], MAX_TOKENS);
+        assert_eq!(anthropic["messages"][0]["content"], "Hi");
+        let openai = completion_body(ProviderKind::Openai, &completion);
+        assert_eq!(openai["messages"][0]["role"], "system");
+        assert_eq!(openai["messages"][1]["content"], "Hi");
+    }
+
+    #[test]
+    fn parses_completions_per_provider() {
+        let anthropic = r#"{"content":[{"type":"thinking","thinking":"x"},{"type":"text","text":"[1,"},{"type":"text","text":"2]"}]}"#;
+        assert_eq!(
+            parse_completion(ProviderKind::Anthropic, anthropic).unwrap(),
+            "[1,2]"
+        );
+        let openai = r#"{"choices":[{"message":{"role":"assistant","content":"hello"}}]}"#;
+        assert_eq!(
+            parse_completion(ProviderKind::Openai, openai).unwrap(),
+            "hello"
+        );
+        assert!(parse_completion(ProviderKind::Openai, r#"{"choices":[]}"#).is_err());
+    }
+
+    #[test]
+    fn rejects_empty_or_oversized_prompts() {
+        let completion = |prompt: String| Completion {
+            model: "m".into(),
+            system: String::new(),
+            prompt,
+            max_tokens: 10,
+        };
+        assert!(completion("  ".into()).validate().is_err());
+        assert!(
+            completion("x".repeat(MAX_PROMPT_BYTES + 1))
+                .validate()
+                .is_err()
+        );
+        assert!(completion("ok".into()).validate().is_ok());
     }
 }
