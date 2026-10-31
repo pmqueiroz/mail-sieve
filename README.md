@@ -24,9 +24,12 @@ and any IMAP4rev1 server.
 ## Quick start
 
 ```sh
-docker build -t mail-sieve .
-docker run -d --name mail-sieve -p 127.0.0.1:8080:8080 -v mail-sieve-data:/data mail-sieve
+docker run -d --name mail-sieve -p 127.0.0.1:8080:8080 -v mail-sieve-data:/data ghcr.io/pmqueiroz/mail-sieve
 ```
+
+Images are published for `linux/amd64` and `linux/arm64`. `latest` is the
+newest release and `edge` follows `main`. To build it yourself instead:
+`docker build -t mail-sieve .`
 
 Or with compose: `docker compose -f docker/compose.yml up -d` (set `MAIL_SIEVE_PORT` to use a host port other than 8080, and `MAIL_SIEVE_HOST_IP=0.0.0.0` to reach it from other devices; both can live in `docker/.env`).
 
