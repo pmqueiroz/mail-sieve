@@ -7,10 +7,14 @@ explain the *why* and the gotchas.
 
 - [conventions.md](./.refs/conventions.md) — authoring rules: **no comments in
   code** (docs go in `.refs/`), reusable-component discipline. Read first.
-- [architecture.md](./.refs/architecture.md) — stack, layout, data model,
-  extension points, conventions. Fill in as the project takes shape.
+- [architecture.md](./.refs/architecture.md) — why browser + Rust, IMAP
+  performance strategy, crate layout, data model, query DSL, providers
+  (Gmail vs generic), jobs, rules, IDLE, web UI, known gaps.
 - [ci-cd.md](./.refs/ci-cd.md) — CI/CD pipeline: jobs, toolchain pin, what's
   not set up yet.
+- [security.md](./.refs/security.md) — credential vault, admin sessions,
+  destructive-action guards, unsubscribe SSRF guard, web headers. **Read
+  before touching auth, actions or unsubscribe.**
 - [incidents/](./.refs/incidents/README.md) — postmortems + standing rules;
   **read before any migration or destructive op**.
 
