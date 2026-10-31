@@ -43,7 +43,7 @@
 </script>
 
 <button
-  class="inline-flex shrink-0 items-center justify-center gap-4 whitespace-nowrap rounded-full font-semibold disabled:opacity-55 {variants[variant]} {sizes[size]} {className}"
+  class="inline-flex shrink-0 items-center justify-center gap-4 whitespace-nowrap rounded-full font-semibold transition-transform duration-100 ease-out active:scale-96 disabled:opacity-55 disabled:active:scale-100 motion-reduce:transition-none {variants[variant]} {sizes[size]} {className}"
   disabled={disabled || busy}
   aria-busy={busy}
   {...rest}>

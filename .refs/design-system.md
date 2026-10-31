@@ -63,7 +63,7 @@ One concept, one component (`web/src/lib/components`):
 - `Button` (variants `primary outline ghost danger danger-text muted-text
   inverse on-dark on-dark-outline`; sizes are the design's heights:
   `xs 28 · sm 30 · md 32 · lg 34 · xl 36 · 2xl 38 · dialog 40 · block 48`,
-  `block` is full width).
+  `block` is full width; pressing scales it to 96%, not when disabled).
 - `PasswordField` (label, 48px bordered field with a Show/Hide reveal
   toggle, inline error or hint; the border turns `bad` on error).
 - `Chip` (toggle pill: filter chips, mobile nav, rule choices),
