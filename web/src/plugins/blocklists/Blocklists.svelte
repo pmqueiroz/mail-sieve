@@ -81,7 +81,7 @@
     </div>
   {/each}
   <div class="flex flex-wrap items-center gap-4">
-    <span class="flex min-w-120 flex-1"><TextInput mono type="url" spellcheck="false" aria-label="Blocklist URL" placeholder="https://example.com/blocklist.txt" bind:value={draft} onkeydown={(event) => event.key === 'Enter' && add()} /></span>
+    <span class="flex min-w-120 flex-1 flex-col"><TextInput mono type="url" spellcheck="false" aria-label="Blocklist URL" placeholder="https://example.com/blocklist.txt" bind:value={draft} onkeydown={(event) => event.key === 'Enter' && add()} /></span>
     <Button busy={checking !== null && checking === draft.trim()} disabled={!draft.trim() || checking !== null} onclick={add}>Add and check</Button>
   </div>
   {#if result}
