@@ -121,6 +121,15 @@ export interface PendingLink {
   at: number;
 }
 
+export interface StillSending {
+  from_addr: string;
+  name: string | null;
+  method: string;
+  unsubscribed_at: number;
+  since_count: number;
+  last_date: number;
+}
+
 export type JobState = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
 
 export interface Job {
