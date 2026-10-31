@@ -3,6 +3,7 @@ mod auth;
 mod jobs;
 mod mail;
 mod oauth;
+mod pins;
 mod rules;
 
 use axum::Router;
@@ -45,6 +46,10 @@ pub fn router(state: AppState) -> Router {
         .route(
             "/accounts/{id}/unsubscribes/done",
             post(mail::finish_unsubscribe),
+        )
+        .route(
+            "/accounts/{id}/pins",
+            get(pins::list).post(pins::add).delete(pins::remove),
         )
         .route("/messages/{id}/preview", get(mail::preview))
         .route("/jobs", get(jobs::list))
