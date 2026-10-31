@@ -43,6 +43,16 @@ struct Manifest {
     author: String,
     #[serde(default = "default_entry")]
     entry: String,
+    #[serde(default)]
+    avatar: Option<Avatar>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct Avatar {
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
+    pub color: Option<String>,
 }
 
 fn default_entry() -> String {
@@ -56,6 +66,7 @@ pub struct CommunityPlugin {
     pub version: String,
     pub description: String,
     pub author: String,
+    pub avatar: Option<Avatar>,
     pub entry_url: Option<String>,
     pub error: Option<String>,
 }
@@ -183,6 +194,7 @@ fn load(dir: &Path, id: String) -> CommunityPlugin {
         version: String::new(),
         description: String::new(),
         author: String::new(),
+        avatar: None,
         entry_url: None,
         error: Some(error),
     };
@@ -204,6 +216,7 @@ fn load(dir: &Path, id: String) -> CommunityPlugin {
         version: manifest.version,
         description: manifest.description,
         author: manifest.author,
+        avatar: manifest.avatar,
         error: None,
     }
 }
@@ -311,7 +324,7 @@ mod tests {
         std::fs::create_dir_all(&good).unwrap();
         std::fs::write(
             good.join("plugin.json"),
-            r#"{"name":"Good","version":"1.0.0"}"#,
+            r#"{"name":"Good","version":"1.0.0","avatar":{"icon":"zap","color":"teal"}}"#,
         )
         .unwrap();
         std::fs::write(good.join("index.js"), "").unwrap();
@@ -325,6 +338,13 @@ mod tests {
         assert_eq!(found[0].id, "bad");
         assert!(found[0].error.is_some());
         assert_eq!(found[1].name, "Good");
+        assert_eq!(
+            found[1].avatar,
+            Some(Avatar {
+                icon: Some("zap".into()),
+                color: Some("teal".into()),
+            })
+        );
         assert_eq!(
             found[1].entry_url.as_deref(),
             Some("/api/plugins/good/files/index.js")
