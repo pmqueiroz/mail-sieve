@@ -1,4 +1,4 @@
-use mail_sieve_core::{Query, TermKind, normalize_label};
+use mail_sieve_core::{Category, Query, TermKind, normalize_label};
 use rusqlite::types::Value;
 use rusqlite::{Connection, Row, params_from_iter};
 use serde::{Deserialize, Serialize};
@@ -33,6 +33,83 @@ impl Compiled {
             self.clauses.join(" AND ")
         }
     }
+}
+
+const SOCIAL_DOMAINS: [&str; 14] = [
+    "facebook.com",
+    "facebookmail.com",
+    "instagram.com",
+    "linkedin.com",
+    "twitter.com",
+    "x.com",
+    "reddit.com",
+    "redditmail.com",
+    "tiktok.com",
+    "pinterest.com",
+    "meetup.com",
+    "strava.com",
+    "discord.com",
+    "mastodon.social",
+];
+const RECEIPT_WORDS: [&str; 7] = [
+    "receipt",
+    "invoice",
+    "order",
+    "payment",
+    "purchase",
+    "booking",
+    "statement",
+];
+const NOTIFICATION_SENDERS: [&str; 6] = [
+    "noreply",
+    "no-reply",
+    "donotreply",
+    "do-not-reply",
+    "notification",
+    "alert",
+];
+
+fn any_like(column: &str, patterns: impl IntoIterator<Item = String>) -> String {
+    patterns
+        .into_iter()
+        .map(|pattern| format!("{column} LIKE '{pattern}'"))
+        .collect::<Vec<_>>()
+        .join(" OR ")
+}
+
+pub fn category_sql() -> String {
+    let receipts = any_like(
+        "m.subject",
+        RECEIPT_WORDS.iter().map(|word| format!("%{word}%")),
+    );
+    let social_domains = SOCIAL_DOMAINS
+        .iter()
+        .map(|domain| format!("'{domain}'"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let social_subdomains = any_like(
+        "m.from_domain",
+        SOCIAL_DOMAINS.iter().map(|domain| format!("%.{domain}")),
+    );
+    let notifications = any_like(
+        "m.from_addr",
+        NOTIFICATION_SENDERS.iter().map(|word| format!("%{word}%")),
+    );
+    format!(
+        "CASE \
+         WHEN {receipts} THEN '{}' \
+         WHEN m.from_domain IN ({social_domains}) OR {social_subdomains} THEN '{}' \
+         WHEN m.list_id IS NOT NULL THEN '{}' \
+         WHEN {notifications} THEN '{}' \
+         WHEN m.unsub_http IS NOT NULL OR m.unsub_mailto IS NOT NULL THEN '{}' \
+         ELSE '{}' END",
+        Category::Receipts,
+        Category::Social,
+        Category::Newsletters,
+        Category::Notifications,
+        Category::Promotions,
+        Category::People,
+    )
 }
 
 fn like_escape(value: &str) -> String {
@@ -107,6 +184,11 @@ fn compile(account_id: i64, query: &Query, now: i64) -> Compiled {
             TermKind::After(timestamp) => compiled.push(negated, "m.date >= ?".into(), [Value::Integer(*timestamp)]),
             TermKind::Larger(bytes) => compiled.push(negated, "m.size > ?".into(), [Value::Integer(*bytes as i64)]),
             TermKind::Smaller(bytes) => compiled.push(negated, "m.size < ?".into(), [Value::Integer(*bytes as i64)]),
+            TermKind::Category(category) => compiled.push(
+                negated,
+                format!("({}) = ?", category_sql()),
+                [Value::Text(category.to_string())],
+            ),
             TermKind::Text(text) => compiled.push(
                 negated,
                 "m.id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?)".into(),
@@ -534,6 +616,9 @@ mod tests {
         assert_eq!(uids(&store, account, "phot"), vec![5]);
         assert_eq!(uids(&store, account, "-sale shop"), vec![2, 3]);
         assert_eq!(uids(&store, account, "subject:100%"), Vec::<u32>::new());
+        assert_eq!(uids(&store, account, "category:newsletters"), vec![1, 2, 3]);
+        assert_eq!(uids(&store, account, "category:people"), vec![4, 5]);
+        assert_eq!(uids(&store, account, "-category:people"), vec![1, 2, 3]);
     }
 
     #[test]

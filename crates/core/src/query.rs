@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::Category;
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Query {
     pub terms: Vec<Term>,
@@ -29,6 +31,7 @@ pub enum TermKind {
     After(i64),
     Larger(u64),
     Smaller(u64),
+    Category(Category),
     Text(String),
 }
 
@@ -175,6 +178,7 @@ fn parse_token(token: Token) -> Result<Term, QueryError> {
         "after" => TermKind::After(parse_date(&value).ok_or_else(invalid)?),
         "larger" | "size" => TermKind::Larger(parse_size(&value).ok_or_else(invalid)?),
         "smaller" => TermKind::Smaller(parse_size(&value).ok_or_else(invalid)?),
+        "category" | "cat" => TermKind::Category(value.parse().map_err(|()| invalid())?),
         _ => return Err(QueryError::UnknownField(field)),
     };
     Ok(Term { negated, kind })
@@ -271,6 +275,13 @@ mod tests {
         assert_eq!(
             kinds("larger:5mb"),
             vec![(false, TermKind::Larger(5 * 1024 * 1024))]
+        );
+        assert_eq!(
+            kinds("category:Receipts -cat:social"),
+            vec![
+                (false, TermKind::Category(Category::Receipts)),
+                (true, TermKind::Category(Category::Social)),
+            ]
         );
         assert_eq!(
             kinds("-has:unsubscribe"),

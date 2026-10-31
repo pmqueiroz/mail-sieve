@@ -1,4 +1,5 @@
 mod action;
+mod category;
 mod flags;
 pub mod headers;
 mod message;
@@ -6,6 +7,7 @@ pub mod query;
 mod uid_set;
 
 pub use action::{Action, UnknownAction};
+pub use category::Category;
 pub use flags::Flags;
 pub use message::{
     Address, LABEL_SEPARATOR, MessageMeta, Unsubscribe, join_labels, normalize_label,

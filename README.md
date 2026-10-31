@@ -106,6 +106,7 @@ mail-sieve health                # exit 0 when the server answers (Docker health
 | `older_than:1y`, `newer_than:7d` | age, units `h d w m y` |
 | `before:2024-01-01`, `after:2023-06-01` | dates |
 | `larger:5mb`, `smaller:100kb` | size |
+| `category:newsletters` | inbox mix category: `newsletters notifications promotions receipts social people` |
 | `-from:boss@work.com` | negate any term |
 | `receipt` | free text over subject and sender |
 

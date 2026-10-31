@@ -98,9 +98,28 @@ address or name), `domain:` (matches subdomains), `subject:`, `list:`,
 `in:` (folder name or Gmail label), `is:unread|read|flagged|answered`,
 `has:unsubscribe|list`, `older_than:`/`newer_than:` (`h d w m y`),
 `before:`/`after:` (`YYYY-MM-DD`, UTC), `larger:`/`smaller:` (`kb mb gb`),
-bare words go to FTS5 as prefix matches. Every compiled clause is wrapped
+`category:` (see below), bare words go to FTS5 as prefix matches. Every compiled clause is wrapped
 in `COALESCE(..., 0)` so negation is NULL-safe. There is no OR; the action
 API accepts `queries: []` and unions their targets instead.
+
+### Categories
+
+`category:` classifies each message into exactly one of six buckets with a
+single SQL `CASE` (`search::category_sql`), first match wins:
+
+1. `receipts`: subject contains receipt, invoice, order, payment, purchase,
+   booking or statement;
+2. `social`: sender domain (or subdomain) is a known social network;
+3. `newsletters`: has a `List-Id`;
+4. `notifications`: sender address looks automated (noreply, notification,
+   alert, ...);
+5. `promotions`: offers unsubscribe but has no list id;
+6. `people`: everything else.
+
+It is a heuristic over headers only, chosen so the Overview "Inbox mix" and
+the `category:` filter always agree: both use the same expression. Order
+matters: a receipt from a mailing list is a receipt. Singular names
+(`category:receipt`) and `cat:` are accepted.
 
 ## Providers
 
