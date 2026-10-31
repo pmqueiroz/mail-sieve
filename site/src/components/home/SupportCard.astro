@@ -24,5 +24,8 @@ const { href, title, cta } = Astro.props;
     <span class="text-xl font-bold tracking-heading">{title}</span>
   </div>
   <p class="m-0 text-base text-pretty text-ink-2"><slot /></p>
-  <PillLink as="span" class="mt-2 self-start font-bold">{cta}</PillLink>
+  <PillLink as="span" class="mt-2 self-start font-bold">
+    <Icon name="heart" class="text-sponsor" />
+    {cta}
+  </PillLink>
 </a>
