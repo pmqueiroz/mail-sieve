@@ -4,10 +4,10 @@
   let {
     open = $bindable(false),
     title,
-    width = 520,
+    wide = false,
     children,
     footer,
-  }: { open?: boolean; title: string; width?: number; children: Snippet; footer?: Snippet } = $props();
+  }: { open?: boolean; title: string; wide?: boolean; children: Snippet; footer?: Snippet } = $props();
 
   let dialog: HTMLDialogElement | undefined = $state();
 
@@ -18,55 +18,16 @@
   });
 </script>
 
-<dialog bind:this={dialog} onclose={() => (open = false)} style:width="min({width}px, calc(100vw - 32px))">
-  <header>
-    <h2>{title}</h2>
-    <button class="close" aria-label="Close" onclick={() => (open = false)}>×</button>
-  </header>
-  <div class="content">{@render children()}</div>
-  {#if footer}<footer>{@render footer()}</footer>{/if}
+<dialog
+  bind:this={dialog}
+  onclose={() => (open = false)}
+  onclick={(event) => event.target === dialog && (open = false)}
+  class="m-auto max-h-[90vh] w-[min(var(--modal-width),calc(100vw-var(--spacing)*16))] overflow-auto rounded-4xl border-0 bg-surface p-12 text-ink shadow-pop backdrop:bg-overlay {wide ? '[--modal-width:calc(var(--spacing)*300)]' : '[--modal-width:calc(var(--spacing)*240)]'}">
+  {#if open}
+    <div class="flex flex-col gap-8">
+      <h2 class="m-0 text-xl font-semibold">{title}</h2>
+      {@render children()}
+      {#if footer}<div class="flex flex-wrap justify-end gap-4">{@render footer()}</div>{/if}
+    </div>
+  {/if}
 </dialog>
-
-<style>
-  dialog {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: 0;
-    background: var(--color-surface);
-    color: var(--color-text);
-    box-shadow: var(--shadow-overlay);
-  }
-  dialog::backdrop {
-    background: rgba(10, 12, 16, 0.45);
-  }
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-4) var(--space-5) 0;
-  }
-  h2 {
-    margin: 0;
-    font-size: var(--text-lg);
-  }
-  .close {
-    border: none;
-    background: none;
-    font-size: 22px;
-    line-height: 1;
-    cursor: pointer;
-    color: var(--color-text-muted);
-  }
-  .content {
-    padding: var(--space-4) var(--space-5);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-  footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-2);
-    padding: 0 var(--space-5) var(--space-4);
-  }
-</style>

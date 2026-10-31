@@ -1,35 +1,31 @@
-<script lang="ts">
-  let { done, total, indeterminate = false }: { done: number; total: number; indeterminate?: boolean } = $props();
-  const percent = $derived(total > 0 ? Math.min(100, (done / total) * 100) : 0);
+<script lang="ts" module>
+  export type ProgressTone = 'btn' | 'good' | 'bad' | 'muted' | 'sieve';
+
+  const tones: Record<ProgressTone, string> = {
+    btn: 'bg-btn',
+    good: 'bg-good',
+    bad: 'bg-bad',
+    muted: 'bg-ink3',
+    sieve: 'bg-sieve',
+  };
 </script>
 
-<div class="track" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
-  <div class="bar" class:indeterminate={indeterminate && total === 0} style:width="{indeterminate && total === 0 ? 30 : percent}%"></div>
-</div>
+<script lang="ts">
+  let {
+    value,
+    tone = 'btn',
+    thin = false,
+    class: className = '',
+  }: { value: number; tone?: ProgressTone; thin?: boolean; class?: string } = $props();
 
-<style>
-  .track {
-    height: 6px;
-    border-radius: 999px;
-    background: var(--color-surface-muted);
-    overflow: hidden;
-    width: 100%;
-  }
-  .bar {
-    height: 100%;
-    background: var(--color-accent);
-    border-radius: 999px;
-    transition: width 200ms;
-  }
-  .indeterminate {
-    animation: slide 1.2s ease-in-out infinite;
-  }
-  @keyframes slide {
-    from {
-      transform: translateX(-100%);
-    }
-    to {
-      transform: translateX(330%);
-    }
-  }
-</style>
+  const width = $derived(Math.max(0, Math.min(100, value)));
+</script>
+
+<div
+  class="overflow-hidden rounded-full bg-track {thin ? 'h-2' : 'h-3'} {className}"
+  role="progressbar"
+  aria-valuemin={0}
+  aria-valuemax={100}
+  aria-valuenow={Math.round(width)}>
+  <div class="h-full transition-[width] duration-200 {tones[tone]}" style:width="{width}%"></div>
+</div>

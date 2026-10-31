@@ -1,86 +1,51 @@
+<script lang="ts" module>
+  export type ButtonVariant = 'primary' | 'outline' | 'ghost' | 'danger' | 'danger-text' | 'muted-text' | 'inverse' | 'on-dark' | 'on-dark-outline';
+  export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xl-wide' | '2xl' | 'dialog';
+
+  const variants: Record<ButtonVariant, string> = {
+    primary: 'border-0 bg-btn text-btn-ink',
+    outline: 'border border-line',
+    ghost: 'border-0 bg-transparent',
+    danger: 'border-0 bg-bad text-white',
+    'danger-text': 'border-0 bg-transparent text-bad',
+    'muted-text': 'border-0 bg-transparent text-ink2',
+    inverse: 'border-0 bg-btn-ink text-btn',
+    'on-dark': 'border-0 bg-transparent text-btn-ink',
+    'on-dark-outline': 'border border-current bg-transparent text-btn-ink',
+  };
+
+  const sizes: Record<ButtonSize, string> = {
+    xs: 'h-14 px-6 text-xs',
+    sm: 'h-15 px-6 text-xs',
+    md: 'h-16 px-7 text-sm',
+    lg: 'h-17 px-7 text-sm',
+    xl: 'h-18 px-7 text-sm',
+    'xl-wide': 'h-18 px-8 text-sm',
+    '2xl': 'h-19 px-9 text-sm',
+    dialog: 'h-20 px-9 text-base',
+  };
+</script>
+
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLButtonAttributes } from 'svelte/elements';
 
-  type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
-
   let {
-    variant = 'secondary',
-    size = 'md',
+    variant = 'outline',
+    size = 'lg',
     busy = false,
     disabled = false,
+    class: className = '',
     children,
     ...rest
-  }: HTMLButtonAttributes & { variant?: Variant; size?: 'sm' | 'md'; busy?: boolean; children: Snippet } = $props();
+  }: HTMLButtonAttributes & { variant?: ButtonVariant; size?: ButtonSize; busy?: boolean; children: Snippet } = $props();
 </script>
 
-<button class="button {variant} {size}" disabled={disabled || busy} aria-busy={busy} {...rest}>
-  {#if busy}<span class="spinner" aria-hidden="true"></span>{/if}
+<button
+  class="inline-flex shrink-0 items-center justify-center gap-4 whitespace-nowrap rounded-full font-semibold disabled:opacity-55 {variants[variant]} {sizes[size]} {className}"
+  disabled={disabled || busy}
+  aria-busy={busy}
+  {...rest}>
+  {#if busy}<span class="size-6 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true"></span>{/if}
   {@render children()}
 </button>
-
-<style>
-  .button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-surface);
-    padding: var(--space-2) var(--space-3);
-    font-weight: 550;
-    line-height: 1.2;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 120ms, border-color 120ms;
-  }
-  .button.sm {
-    padding: var(--space-1) var(--space-2);
-    font-size: var(--text-sm);
-  }
-  .button:hover:not(:disabled) {
-    background: var(--color-surface-muted);
-  }
-  .button:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-  .button:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-  .primary {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
-    color: var(--color-accent-text);
-  }
-  .primary:hover:not(:disabled) {
-    background: var(--color-accent);
-    filter: brightness(1.08);
-  }
-  .ghost {
-    border-color: transparent;
-    background: transparent;
-  }
-  .danger {
-    color: var(--color-danger);
-    border-color: var(--color-danger-soft);
-  }
-  .danger:hover:not(:disabled) {
-    background: var(--color-danger-soft);
-  }
-  .spinner {
-    width: 12px;
-    height: 12px;
-    border: 2px solid currentColor;
-    border-right-color: transparent;
-    border-radius: 50%;
-    animation: spin 700ms linear infinite;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-</style>

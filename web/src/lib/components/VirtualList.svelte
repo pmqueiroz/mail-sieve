@@ -5,7 +5,7 @@
     items,
     key,
     row,
-    rowHeight = 44,
+    rowHeight,
     overscan = 10,
     resetKey = '',
     onEndReached,
@@ -13,25 +13,51 @@
     items: T[];
     key: (item: T) => string | number;
     row: Snippet<[T, number]>;
-    rowHeight?: number;
+    rowHeight: number;
     overscan?: number;
     resetKey?: string;
     onEndReached?: () => void;
   } = $props();
 
-  let viewport: HTMLDivElement | undefined = $state();
-  let scrollTop = $state(0);
-  let height = $state(0);
+  let container: HTMLDivElement | undefined = $state();
+  let offset = $state(0);
+  let viewport = $state(window.innerHeight);
 
-  const start = $derived(Math.max(0, Math.floor(scrollTop / rowHeight) - overscan));
-  const end = $derived(Math.min(items.length, Math.ceil((scrollTop + height) / rowHeight) + overscan));
+  const start = $derived(Math.max(0, Math.floor(-offset / rowHeight) - overscan));
+  const end = $derived(Math.min(items.length, Math.ceil((viewport - offset) / rowHeight) + overscan));
   const visible = $derived(items.slice(start, end));
+
+  function measure() {
+    if (!container) return;
+    offset = container.getBoundingClientRect().top;
+    viewport = window.innerHeight;
+  }
+
+  $effect(() => {
+    let frame = 0;
+    const schedule = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        measure();
+      });
+    };
+    measure();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+    };
+  });
 
   $effect(() => {
     void resetKey;
     untrack(() => {
-      if (viewport) viewport.scrollTop = 0;
-      scrollTop = 0;
+      const top = container?.getBoundingClientRect().top ?? 0;
+      if (top < 0) window.scrollTo({ top: window.scrollY + top });
+      measure();
     });
   });
 
@@ -40,33 +66,10 @@
   });
 </script>
 
-<div class="viewport" bind:this={viewport} bind:clientHeight={height} onscroll={() => (scrollTop = viewport?.scrollTop ?? 0)}>
-  <div class="spacer" style:height="{items.length * rowHeight}px">
-    <div class="window" style:transform="translateY({start * rowHeight}px)">
-      {#each visible as item, index (key(item))}
-        <div class="row" style:height="{rowHeight}px">{@render row(item, start + index)}</div>
-      {/each}
-    </div>
+<div bind:this={container} class="relative" style:height="{items.length * rowHeight}px">
+  <div class="absolute inset-x-0 top-0 will-change-transform" style:transform="translateY({start * rowHeight}px)">
+    {#each visible as item, index (key(item))}
+      <div style:height="{rowHeight}px">{@render row(item, start + index)}</div>
+    {/each}
   </div>
 </div>
-
-<style>
-  .viewport {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    contain: strict;
-  }
-  .spacer {
-    position: relative;
-  }
-  .window {
-    position: absolute;
-    inset: 0 0 auto 0;
-    will-change: transform;
-  }
-  .row {
-    display: flex;
-    align-items: stretch;
-  }
-</style>

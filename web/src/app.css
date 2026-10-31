@@ -133,6 +133,11 @@
   }
 }
 
+@utility border-check {
+  border-width: 1.5px;
+  border-style: solid;
+}
+
 @utility bg-sieve {
   background-image: linear-gradient(
     90deg,

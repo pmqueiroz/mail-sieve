@@ -1,36 +1,10 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  let { title, children }: { title: string; children?: Snippet } = $props();
+  let { title, children }: { title?: string; children?: Snippet } = $props();
 </script>
 
-<div class="empty">
-  <h2>{title}</h2>
-  {#if children}<div class="body">{@render children()}</div>{/if}
+<div class="flex flex-col items-center gap-6 py-24 text-center text-ink2">
+  {#if title}<h2 class="m-0 text-lg font-semibold text-ink">{title}</h2>{/if}
+  {#if children}<div class="flex max-w-220 flex-col items-center gap-6 text-pretty">{@render children()}</div>{/if}
 </div>
-
-<style>
-  .empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    padding: var(--space-6);
-    text-align: center;
-    color: var(--color-text-muted);
-    flex: 1;
-  }
-  h2 {
-    margin: 0;
-    font-size: var(--text-lg);
-    color: var(--color-text);
-  }
-  .body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-3);
-    max-width: 440px;
-  }
-</style>

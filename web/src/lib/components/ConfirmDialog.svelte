@@ -31,17 +31,10 @@
   }
 </script>
 
-<Modal bind:open {title} width={440}>
-  <p class="message">{message}</p>
+<Modal bind:open {title}>
+  <p class="m-0 text-pretty leading-normal text-ink2">{message}</p>
   {#snippet footer()}
-    <Button variant="ghost" onclick={() => (open = false)}>Cancel</Button>
-    <Button variant={danger ? 'danger' : 'primary'} {busy} onclick={confirm}>{confirmLabel}</Button>
+    <Button size="dialog" onclick={() => (open = false)}>Cancel</Button>
+    <Button size="dialog" variant={danger ? 'danger' : 'primary'} {busy} onclick={confirm}>{confirmLabel}</Button>
   {/snippet}
 </Modal>
-
-<style>
-  .message {
-    margin: 0;
-    line-height: 1.5;
-  }
-</style>
