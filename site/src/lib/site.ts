@@ -2,7 +2,7 @@ const repo = 'https://github.com/pmqueiroz/mail-sieve';
 
 export const site = {
   name: 'mail-sieve',
-  title: 'mail-sieve: bulk-clean any IMAP mailbox, self-hosted',
+  title: 'mailsieve: bulk-clean any IMAP mailbox, self-hosted',
   description:
     'mail-sieve groups every message by sender, then lets you archive, trash or unsubscribe from thousands at once. Self-hosted, works with any IMAP server.',
   locale: 'en',
