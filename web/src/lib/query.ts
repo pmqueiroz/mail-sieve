@@ -39,3 +39,43 @@ export function toggleTerm(query: string, term: string): string {
   const terms = query.split(/\s+/).filter(Boolean);
   return (terms.includes(term) ? terms.filter((existing) => existing !== term) : [...terms, term]).join(' ');
 }
+
+export interface Term {
+  negated: boolean;
+  field: string;
+  value: string;
+}
+
+export function splitTerms(query: string): string[] {
+  const terms: string[] = [];
+  let current = '';
+  let quoted = false;
+  for (const char of query) {
+    if (char === '"') quoted = !quoted;
+    if (!quoted && /\s/.test(char)) {
+      if (current) terms.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  if (current) terms.push(current);
+  return terms;
+}
+
+export function parseTerm(raw: string): Term {
+  const negated = raw.length > 1 && raw.startsWith('-');
+  const body = negated ? raw.slice(1) : raw;
+  const colon = body.indexOf(':');
+  const quote = body.indexOf('"');
+  const fielded = colon > 0 && (quote === -1 || colon < quote);
+  return {
+    negated,
+    field: fielded ? body.slice(0, colon).toLowerCase() : '',
+    value: (fielded ? body.slice(colon + 1) : body).replaceAll('"', ''),
+  };
+}
+
+export function formatTerm(term: Term): string {
+  return `${term.negated ? '-' : ''}${term.field ? `${term.field}:` : ''}${quote(term.value)}`;
+}

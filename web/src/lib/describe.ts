@@ -1,3 +1,4 @@
+import { formatTerm, parseTerm, splitTerms } from './query';
 import type { Rule } from './types';
 
 const UNITS: Record<string, [string, string]> = {
@@ -20,10 +21,9 @@ function describeQuery(query: string): string {
   let noun = 'messages';
   const adjectives: string[] = [];
   const clauses: string[] = [];
-  for (const raw of query.split(/\s+/).filter(Boolean)) {
-    const negated = raw.startsWith('-');
-    const term = negated ? raw.slice(1) : raw;
-    const [field, value = ''] = term.includes(':') ? [term.slice(0, term.indexOf(':')), term.slice(term.indexOf(':') + 1)] : ['', term];
+  for (const raw of splitTerms(query)) {
+    const { negated, field, value } = parseTerm(raw);
+    const term = formatTerm({ negated: false, field, value });
     const not = negated ? 'not ' : '';
     if ((field === 'has' && value === 'list') || (field === 'list' && value === '*')) noun = negated ? 'non-newsletter messages' : 'newsletters';
     else if (field === 'category' || field === 'cat') noun = negated ? `messages that are not ${value}` : value;
