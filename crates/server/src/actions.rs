@@ -29,46 +29,67 @@ pub(crate) enum LocalEffect {
     RemoveLabel(String),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Enqueued {
+    pub job_id: Option<i64>,
+    pub skipped_pinned: u64,
+}
+
 pub async fn enqueue(
     state: &AppState,
     account_id: i64,
     selection: Selection,
     action: &Action,
     origin: &str,
-) -> Result<Option<i64>> {
+    include_pinned: bool,
+) -> Result<Enqueued> {
     let now = mail_sieve_store::now();
-    let payload = json!({ "action": action.to_string(), "origin": origin });
+    let action_name = action.to_string();
+    let origin = origin.to_string();
     let undoable = action.is_undoable();
-    let job_id = state
+    let enqueued = state
         .write(move |tx| {
-            let targets = match &selection {
-                Selection::Query(query) => search::resolve(tx, account_id, query, now, true)?,
+            let resolved = match &selection {
+                Selection::Query(query) => {
+                    search::resolve(tx, account_id, query, now, include_pinned)?
+                }
                 Selection::AnyOf(queries) => {
                     let mut union = search::Resolved::default();
                     for query in queries {
-                        union.merge(search::resolve(tx, account_id, query, now, true)?);
+                        union.merge(search::resolve(tx, account_id, query, now, include_pinned)?);
                     }
                     union
                 }
-                Selection::Ids(ids) => search::resolve_ids(tx, account_id, ids, true)?,
+                Selection::Ids(ids) => search::resolve_ids(tx, account_id, ids, include_pinned)?,
+            };
+            let skipped_pinned = resolved.skipped.len() as u64;
+            if resolved.targets.is_empty() {
+                return Ok(Enqueued {
+                    job_id: None,
+                    skipped_pinned,
+                });
             }
-            .targets;
-            if targets.is_empty() {
-                return Ok(None);
-            }
+            let payload = json!({
+                "action": action_name,
+                "origin": origin,
+                "skipped_pinned": skipped_pinned,
+            });
             let job_id = jobs::create(tx, Some(account_id), "action", &payload)?;
-            jobs::add_targets(tx, job_id, &targets)?;
+            jobs::add_targets(tx, job_id, &resolved.targets)?;
             if undoable {
                 jobs::record_undo(tx, job_id)?;
             }
-            Ok(Some(job_id))
+            Ok(Enqueued {
+                job_id: Some(job_id),
+                skipped_pinned,
+            })
         })
         .await?;
-    if let Some(job_id) = job_id {
+    if let Some(job_id) = enqueued.job_id {
         state.emit_job(job_id).await;
         state.jobs_wakeup.notify_one();
     }
-    Ok(job_id)
+    Ok(enqueued)
 }
 
 pub(crate) fn special<'a>(mailboxes: &'a [Mailbox], special_use: &str) -> Option<&'a Mailbox> {

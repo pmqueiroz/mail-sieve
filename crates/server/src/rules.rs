@@ -1,7 +1,7 @@
 use mail_sieve_core::{Action, Query};
 use mail_sieve_store::rules::{self, Rule, RuleInput};
 
-use crate::actions::{self, Selection};
+use crate::actions::{self, Enqueued, Selection};
 use crate::error::{Error, Result};
 use crate::state::AppState;
 
@@ -32,7 +32,7 @@ pub fn validate(input: &RuleInput) -> Result<()> {
     Ok(())
 }
 
-pub async fn run_rule(state: &AppState, rule: &Rule) -> Result<Option<i64>> {
+pub async fn run_rule(state: &AppState, rule: &Rule) -> Result<Enqueued> {
     let query = Query::parse(&rule.query)?;
     let action: Action = rule
         .action
@@ -46,6 +46,7 @@ pub async fn run_rule(state: &AppState, rule: &Rule) -> Result<Option<i64>> {
         Selection::Query(query),
         &action,
         &format!("rule:{}", rule.id),
+        false,
     )
     .await
 }

@@ -128,6 +128,8 @@ pub struct ActionBody {
     action: String,
     #[serde(default)]
     confirm: bool,
+    #[serde(default)]
+    include_pinned: bool,
 }
 
 fn parse_action(raw: &str) -> Result<Action> {
@@ -170,9 +172,24 @@ pub async fn action(
             "permanent deletion needs confirmation".into(),
         ));
     }
+    if body.include_pinned && !body.confirm {
+        return Err(Error::BadRequest(
+            "acting on pinned senders needs confirmation".into(),
+        ));
+    }
     accounts::load(&state, id).await?;
-    let job_id = actions::enqueue(&state, id, selection, &action, "manual").await?;
-    Ok(Json(json!({ "job_id": job_id })))
+    let enqueued = actions::enqueue(
+        &state,
+        id,
+        selection,
+        &action,
+        "manual",
+        body.include_pinned,
+    )
+    .await?;
+    Ok(Json(
+        json!({ "job_id": enqueued.job_id, "skipped_pinned": enqueued.skipped_pinned }),
+    ))
 }
 
 #[derive(Deserialize)]
@@ -240,14 +257,28 @@ pub async fn unsubscribe(
             )
         })
         .await?;
-    let job_id = match (&outcome, follow_up) {
+    let enqueued = match (&outcome, follow_up) {
         (Ok(_), Some(action)) => {
             let query = Query::parse(&format!("from:\"{from_addr}\""))?;
-            actions::enqueue(&state, id, Selection::Query(query), &action, "unsubscribe").await?
+            Some(
+                actions::enqueue(
+                    &state,
+                    id,
+                    Selection::Query(query),
+                    &action,
+                    "unsubscribe",
+                    false,
+                )
+                .await?,
+            )
         }
         _ => None,
     };
-    Ok(Json(json!({ "outcome": response, "job_id": job_id })))
+    Ok(Json(json!({
+        "outcome": response,
+        "job_id": enqueued.and_then(|enqueued| enqueued.job_id),
+        "skipped_pinned": enqueued.map_or(0, |enqueued| enqueued.skipped_pinned),
+    })))
 }
 
 pub async fn pending_unsubscribes(

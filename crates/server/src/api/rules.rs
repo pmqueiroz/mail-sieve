@@ -84,8 +84,10 @@ pub async fn remove(State(state): State<AppState>, Path(id): Path<i64>) -> Resul
 
 pub async fn run(State(state): State<AppState>, Path(id): Path<i64>) -> Result<Json<Value>> {
     let rule = state.read(move |c| rules::get(c, id)).await?;
-    let job_id = run_rule(&state, &rule).await?;
-    Ok(Json(json!({ "job_id": job_id })))
+    let enqueued = run_rule(&state, &rule).await?;
+    Ok(Json(
+        json!({ "job_id": enqueued.job_id, "skipped_pinned": enqueued.skipped_pinned }),
+    ))
 }
 
 pub async fn export(
