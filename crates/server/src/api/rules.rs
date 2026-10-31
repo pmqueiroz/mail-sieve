@@ -1,12 +1,14 @@
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderValue, StatusCode, header};
+use axum::response::IntoResponse;
 use mail_sieve_store::rules::{self, Rule, RuleInput};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use crate::error::Result;
 use crate::rules::{run_rule, validate};
+use crate::rules_file::{self, ImportReport, OnConflict};
 use crate::state::AppState;
 
 #[derive(Deserialize)]
@@ -84,4 +86,79 @@ pub async fn run(State(state): State<AppState>, Path(id): Path<i64>) -> Result<J
     let rule = state.read(move |c| rules::get(c, id)).await?;
     let job_id = run_rule(&state, &rule).await?;
     Ok(Json(json!({ "job_id": job_id })))
+}
+
+pub async fn export(
+    State(state): State<AppState>,
+    Path(account_id): Path<i64>,
+) -> Result<impl IntoResponse> {
+    let (account, rules) = state
+        .read(move |c| {
+            let account = mail_sieve_store::accounts::get(c, account_id)?;
+            Ok((account, rules::for_account(c, account_id)?))
+        })
+        .await?;
+    let yaml = rules_file::export(&rules)?;
+    let disposition = format!(
+        "attachment; filename=\"{}\"",
+        export_file_name(&account.email)
+    );
+    Ok((
+        [
+            (
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("application/yaml; charset=utf-8"),
+            ),
+            (
+                header::CONTENT_DISPOSITION,
+                HeaderValue::try_from(disposition)
+                    .map_err(|e| crate::error::Error::Internal(e.to_string()))?,
+            ),
+        ],
+        yaml,
+    ))
+}
+
+fn export_file_name(email: &str) -> String {
+    let safe: String = email
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '@' | '.' | '-' | '_') {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    format!("mail-sieve-rules-{safe}.yaml")
+}
+
+#[derive(Deserialize)]
+pub struct ImportBody {
+    yaml: String,
+    #[serde(default)]
+    on_conflict: OnConflict,
+    #[serde(default)]
+    apply: bool,
+}
+
+pub async fn import(
+    State(state): State<AppState>,
+    Path(account_id): Path<i64>,
+    Json(body): Json<ImportBody>,
+) -> Result<Json<ImportReport>> {
+    state
+        .read(move |c| mail_sieve_store::accounts::get(c, account_id))
+        .await?;
+    let file = rules_file::parse(&body.yaml, account_id)?;
+    let report = if body.apply {
+        state
+            .write(move |tx| rules_file::import(tx, file, body.on_conflict, true))
+            .await?
+    } else {
+        state
+            .read(move |c| rules_file::import(c, file, body.on_conflict, false))
+            .await?
+    };
+    Ok(Json(report))
 }

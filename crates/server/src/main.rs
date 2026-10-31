@@ -11,6 +11,7 @@ mod idle;
 mod jobs;
 mod oauth;
 mod rules;
+mod rules_file;
 mod scheduler;
 mod state;
 mod sync;

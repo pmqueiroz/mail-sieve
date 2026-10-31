@@ -55,6 +55,8 @@ pub fn router(state: AppState) -> Router {
         .route("/rules", get(rules::list).post(rules::create))
         .route("/rules/{id}", put(rules::update).delete(rules::remove))
         .route("/rules/{id}/run", post(rules::run))
+        .route("/accounts/{id}/rules/export", get(rules::export))
+        .route("/accounts/{id}/rules/import", post(rules::import))
         .route("/oauth/{provider}/start", get(oauth::start))
         .route("/oauth/{provider}/callback", get(oauth::callback))
         .route("/auth/password", post(auth::change_password))
