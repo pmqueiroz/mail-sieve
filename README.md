@@ -1,4 +1,4 @@
-# mail-sieve
+![banner](.github/assets/banner.png)
 
 Self-hosted control panel for any IMAP mailbox. See who sends you what,
 unsubscribe in bulk, and archive, trash or label thousands of messages at a
