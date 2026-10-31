@@ -15,6 +15,8 @@ order: 3
 | Move to folder | Any existing IMAP folder |
 | Delete permanently | Removes messages from the server. Asks for confirmation and cannot be undone |
 
+Messages from [pinned senders](../senders/#pinned-senders) are skipped, and the action bar tells you how many. Pick a single pinned sender to act on it anyway, after a confirmation.
+
 ## Unsubscribe
 
 Unsubscribe uses the sender's `List-Unsubscribe` header: an RFC 8058 one-click request when offered, otherwise a mailto through your account, otherwise the link opens for you to finish. You can also archive or trash everything that sender sent in the same step.

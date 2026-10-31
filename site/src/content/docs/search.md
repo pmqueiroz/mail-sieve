@@ -16,6 +16,7 @@ order: 2
 | `list:newsletter` | Mailing list id contains |
 | `in:inbox` | Folder, or Gmail label |
 | `is:unread` `is:read` `is:flagged` `is:answered` | State |
+| `is:pinned` | From a [pinned](../senders/#pinned-senders) sender or domain |
 | `has:unsubscribe` `has:list` | Newsletter signals |
 | `older_than:1y` `newer_than:7d` | Age, units `h d w m y` |
 | `before:2024-01-01` `after:2023-06-01` | Dates |
