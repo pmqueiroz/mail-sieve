@@ -1,0 +1,7 @@
+services:
+  dovecot:
+    image: dovecot/dovecot:2.3-latest
+    ports:
+      - "127.0.0.1:3143:143"
+    volumes:
+      - ./dovecot/dovecot.conf:/etc/dovecot/dovecot.conf:ro
