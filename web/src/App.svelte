@@ -25,7 +25,7 @@
 </script>
 
 {#if bootError}
-  <EmptyState title="mail-sieve is unreachable"><p class="m-0">{bootError}</p></EmptyState>
+  <EmptyState title="mailsieve is unreachable"><p class="m-0">{bootError}</p></EmptyState>
 {:else if !session.status}
   <div class="min-h-screen" aria-busy="true"></div>
 {:else if !session.status.authenticated}

@@ -223,7 +223,7 @@
 <ConfirmDialog
   bind:open={confirmRemove}
   title="Remove account?"
-  message="This removes {removing?.email ?? ''} and its local index from mail-sieve. Nothing is deleted on the mail server."
+  message="This removes {removing?.email ?? ''} and its local index from mailsieve. Nothing is deleted on the mail server."
   confirmLabel="Remove account"
   danger
   onconfirm={remove} />

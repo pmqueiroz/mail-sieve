@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BrandText from './BrandText.svelte';
   import Button from './Button.svelte';
   import Modal from './Modal.svelte';
 
@@ -32,7 +33,7 @@
 </script>
 
 <Modal bind:open {title}>
-  <p class="m-0 text-pretty leading-normal text-ink2">{message}</p>
+  <p class="m-0 text-pretty leading-normal text-ink2"><BrandText text={message} /></p>
   {#snippet footer()}
     <Button size="dialog" onclick={() => (open = false)}>Cancel</Button>
     <Button size="dialog" variant={danger ? 'danger' : 'primary'} {busy} onclick={confirm}>{confirmLabel}</Button>

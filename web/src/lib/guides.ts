@@ -15,7 +15,7 @@ export const guides: Record<string, ProviderGuide> = {
   gmail: {
     title: 'Connect a Gmail account',
     intro:
-      'Gmail does not accept your normal Google password from other apps. Instead you create an app password: a separate 16-letter code that only mail-sieve uses and that you can revoke at any time.',
+      'Gmail does not accept your normal Google password from other apps. Instead you create an app password: a separate 16-letter code that only mailsieve uses and that you can revoke at any time.',
     steps: [
       {
         title: 'Turn on 2-Step Verification',
@@ -24,7 +24,7 @@ export const guides: Record<string, ProviderGuide> = {
       },
       {
         title: 'Create an app password',
-        body: 'Type a name such as "mail-sieve" and click Create. Google shows a 16-letter code in four groups. Copy it now, Google shows it only once.',
+        body: 'Type a name such as "mailsieve" and click Create. Google shows a 16-letter code in four groups. Copy it now, Google shows it only once.',
         link: { label: 'Open App passwords', url: 'https://myaccount.google.com/apppasswords' },
       },
       {
@@ -38,7 +38,7 @@ export const guides: Record<string, ProviderGuide> = {
       },
       {
         title: 'Connect and wait for the first sync',
-        body: 'mail-sieve checks the login, then indexes your mail in the background. Senders start appearing within seconds, and you can keep using the app while it works.',
+        body: 'mailsieve checks the login, then indexes your mail in the background. Senders start appearing within seconds, and you can keep using the app while it works.',
       },
     ],
     troubleshooting: [
@@ -54,7 +54,7 @@ export const guides: Record<string, ProviderGuide> = {
     steps: [
       {
         title: 'Create an app-specific password',
-        body: 'Sign in, open Sign-In and Security, choose App-Specific Passwords, and generate one named "mail-sieve".',
+        body: 'Sign in, open Sign-In and Security, choose App-Specific Passwords, and generate one named "mailsieve".',
         link: { label: 'Open Apple Account', url: 'https://account.apple.com' },
       },
       {
@@ -70,7 +70,7 @@ export const guides: Record<string, ProviderGuide> = {
     steps: [
       {
         title: 'Generate an app password',
-        body: 'Open Account security, choose Generate app password, name it "mail-sieve" and copy the code.',
+        body: 'Open Account security, choose Generate app password, name it "mailsieve" and copy the code.',
         link: { label: 'Open Yahoo account security', url: 'https://login.yahoo.com/account/security' },
       },
       {
