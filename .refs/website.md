@@ -58,9 +58,10 @@ Graph and Twitter card, theme color, favicon, sitemap link and JSON-LD.
 Home emits `SoftwareApplication` + `WebSite`; each doc emits `TechArticle` +
 `BreadcrumbList`. `@astrojs/sitemap` writes `sitemap-index.xml`;
 `pages/robots.txt.ts` points to it. `public/og.png` is a 1200x630 card
-rendered from the hero headline (the repo banner is 1280x320 and crops
-badly in link previews). Each doc's frontmatter `description` is its meta
-description, `lead` is the visible subtitle.
+with the logo, the hero headline and a sample top-senders table (the repo
+banner is 1280x320 and crops badly in link previews). Each doc's
+frontmatter `description` is its meta description, `lead` is the visible
+subtitle.
 
 ## Base path and site URL
 
