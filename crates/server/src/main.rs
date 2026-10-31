@@ -52,6 +52,27 @@ enum Command {
     Accounts,
     SetPassword,
     Health,
+    Rules {
+        #[command(subcommand)]
+        command: RulesCommand,
+    },
+}
+
+#[derive(Subcommand)]
+enum RulesCommand {
+    Export {
+        #[arg(long)]
+        account: i64,
+    },
+    Import {
+        #[arg(long)]
+        account: i64,
+        file: std::path::PathBuf,
+        #[arg(long)]
+        replace: bool,
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 #[tokio::main]
@@ -116,6 +137,7 @@ async fn run(cli: Cli) -> Result<()> {
             Ok(())
         }
         Command::Health => Ok(()),
+        Command::Rules { command } => rules_command(&state, command).await,
         Command::SetPassword => {
             eprintln!("new admin password:");
             let mut password = String::new();
@@ -125,6 +147,58 @@ async fn run(cli: Cli) -> Result<()> {
                 .map_err(|e| Error::Internal(e.to_string()))?;
             set_admin_password(&state, password.trim_end_matches(['\r', '\n'])).await?;
             println!("admin password updated; existing sessions were signed out");
+            Ok(())
+        }
+    }
+}
+
+async fn rules_command(state: &AppState, command: RulesCommand) -> Result<()> {
+    match command {
+        RulesCommand::Export { account } => {
+            let rules = state
+                .read(move |c| {
+                    mail_sieve_store::accounts::get(c, account)?;
+                    mail_sieve_store::rules::for_account(c, account)
+                })
+                .await?;
+            print!("{}", rules_file::export(&rules)?);
+            Ok(())
+        }
+        RulesCommand::Import {
+            account,
+            file,
+            replace,
+            dry_run,
+        } => {
+            let yaml = std::fs::read_to_string(&file)
+                .map_err(|e| Error::BadRequest(format!("{}: {e}", file.display())))?;
+            state
+                .read(move |c| mail_sieve_store::accounts::get(c, account))
+                .await?;
+            let parsed = rules_file::parse(&yaml, account)?;
+            let on_conflict = if replace {
+                rules_file::OnConflict::Replace
+            } else {
+                rules_file::OnConflict::Skip
+            };
+            let report = state
+                .write(move |tx| rules_file::import(tx, parsed, on_conflict, !dry_run))
+                .await?;
+            let existing_verb = match (dry_run, replace) {
+                (true, true) => "would replace",
+                (true, false) => "would skip",
+                (false, true) => "replaced",
+                (false, false) => "skipped",
+            };
+            for name in &report.added {
+                println!("{}\t{name}", if dry_run { "would add" } else { "added" });
+            }
+            for name in &report.existing {
+                println!("{existing_verb}\t{name}");
+            }
+            for invalid in &report.invalid {
+                println!("invalid\t{}: {}", invalid.name, invalid.error);
+            }
             Ok(())
         }
     }
