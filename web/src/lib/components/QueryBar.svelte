@@ -1,147 +1,115 @@
 <script lang="ts">
-  import { api, errorMessage, withParams } from '../api';
+  import { type Snippet, untrack } from 'svelte';
+  import { liveTotals } from '../count.svelte';
   import { formatBytes, formatNumber } from '../format';
   import { QUERY_HELP } from '../query';
-  import { session } from '../session.svelte';
   import type { Totals } from '../types';
+  import Icon from './Icon.svelte';
+  import Popover from './Popover.svelte';
 
   let {
     value = $bindable(''),
     accountId,
-    placeholder = 'Filter: from:*@shop.com older_than:1y is:unread',
+    placeholder,
+    large = false,
     showCount = true,
     totals = $bindable<Totals | null>(null),
+    trailing,
   }: {
     value?: string;
     accountId: number;
-    placeholder?: string;
+    placeholder: string;
+    large?: boolean;
     showCount?: boolean;
     totals?: Totals | null;
+    trailing?: Snippet;
   } = $props();
 
-  let draft = $state('');
-  let error = $state<string | null>(null);
+  const DEBOUNCE_MS = 250;
+
+  let draft = $state(value);
   let help = $state(false);
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const live = liveTotals(
+    () => accountId,
+    () => value,
+  );
 
   $effect(() => {
-    draft = value;
+    totals = live.totals;
   });
+
+  $effect(() => {
+    const next = value;
+    untrack(() => {
+      if (next !== draft.trim()) draft = next;
+    });
+  });
+
+  function commit() {
+    clearTimeout(timer);
+    value = draft.trim();
+  }
 
   function schedule() {
     clearTimeout(timer);
-    timer = setTimeout(() => (value = draft.trim()), 250);
+    timer = setTimeout(commit, DEBOUNCE_MS);
   }
 
-  $effect(() => {
-    const query = value;
-    const id = accountId;
-    void session.dataVersion;
-    let cancelled = false;
-    api
-      .get<Totals>(withParams(`/accounts/${id}/count`, { q: query }))
-      .then((result) => {
-        if (cancelled) return;
-        totals = result;
-        error = null;
-      })
-      .catch((reason) => {
-        if (cancelled) return;
-        totals = null;
-        error = errorMessage(reason);
-      });
-    return () => (cancelled = true);
-  });
+  function add(term: string) {
+    draft = `${draft} ${term}`.trim();
+    help = false;
+    commit();
+  }
 </script>
 
-<div class="query">
-  <div class="input-row">
+{#snippet count()}
+  {#if live.error}
+    <span class="text-bad">{live.error}</span>
+  {:else if live.totals}
+    <span><b class="text-ink">{formatNumber(live.totals.count)}</b> messages, {formatBytes(live.totals.bytes)}</span>
+  {/if}
+{/snippet}
+
+<div class="flex flex-col gap-7">
+  <div class="relative box-content flex items-center gap-5 rounded-full border bg-surface {live.error ? 'border-bad' : 'border-line'} {large ? 'h-24 pr-4 pl-8' : 'h-22 px-8'}">
+    <Icon name="search" size={16} class="shrink-0 text-ink3" />
     <input
       type="search"
       spellcheck="false"
       autocomplete="off"
-      aria-label="Query"
-      class:invalid={error}
+      aria-label="Search"
+      class="min-w-0 flex-1 border-0 bg-transparent font-mono outline-0 {large ? 'text-base' : 'text-sm'}"
       {placeholder}
       bind:value={draft}
       oninput={schedule}
-      onkeydown={(event) => event.key === 'Enter' && (clearTimeout(timer), (value = draft.trim()))} />
-    <button class="help-toggle" aria-expanded={help} onclick={() => (help = !help)} title="Query syntax">?</button>
+      onkeydown={(event) => event.key === 'Enter' && commit()} />
+    {#if showCount}
+      <span class="hidden whitespace-nowrap text-sm text-ink2 wide:inline" aria-live="polite">{@render count()}</span>
+    {/if}
+    {@render trailing?.()}
+    {#if large}
+      <button
+        type="button"
+        title="Search syntax"
+        aria-expanded={help}
+        class="size-16 shrink-0 rounded-full border border-line font-bold {help ? 'bg-chip' : 'bg-transparent'}"
+        onclick={() => (help = !help)}>?</button>
+      <Popover bind:open={help} class="top-28 right-0 box-content flex w-[min(calc(var(--spacing)*210),90vw)] flex-col gap-2 p-8">
+        <div class="mb-3 font-semibold">Every term must match. Tap one to add it.</div>
+        {#each QUERY_HELP as [term, meaning] (term)}
+          <button
+            type="button"
+            class="grid grid-cols-[--spacing(75)_1fr] items-center gap-6 rounded-sm border-0 bg-transparent px-4 py-3 text-left hover:bg-chip"
+            onclick={() => add(term)}>
+            <code class="font-mono text-xs">{term}</code>
+            <span class="text-sm text-ink2">{meaning}</span>
+          </button>
+        {/each}
+      </Popover>
+    {/if}
   </div>
   {#if showCount}
-    <div class="status" aria-live="polite">
-      {#if error}
-        <span class="error">{error}</span>
-      {:else if totals}
-        <span><strong>{formatNumber(totals.count)}</strong> messages · {formatBytes(totals.bytes)}</span>
-      {/if}
-    </div>
-  {/if}
-  {#if help}
-    <div class="help card">
-      {#each QUERY_HELP as [example, meaning] (example)}
-        <button class="example mono" onclick={() => ((draft = `${draft} ${example.split('  ')[0]}`.trim()), schedule())}>{example}</button>
-        <span class="muted">{meaning}</span>
-      {/each}
-    </div>
+    <div class="pl-2 text-sm text-ink2 wide:hidden">{@render count()}</div>
   {/if}
 </div>
-
-<style>
-  .query {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    flex: 1;
-    min-width: 280px;
-    position: relative;
-  }
-  .input-row {
-    display: flex;
-    gap: var(--space-2);
-  }
-  .input-row input {
-    font-family: var(--font-mono);
-    font-size: var(--text-sm);
-  }
-  .invalid {
-    border-color: var(--color-danger) !important;
-  }
-  .help-toggle {
-    width: 34px;
-    flex-shrink: 0;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-surface);
-    cursor: pointer;
-    font-weight: 700;
-  }
-  .status {
-    font-size: var(--text-sm);
-    min-height: 1.2em;
-    color: var(--color-text-muted);
-  }
-  .error {
-    color: var(--color-danger);
-  }
-  .help {
-    position: absolute;
-    top: 44px;
-    left: 0;
-    right: 0;
-    z-index: 20;
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: var(--space-1) var(--space-4);
-    padding: var(--space-3) var(--space-4);
-    box-shadow: var(--shadow-overlay);
-  }
-  .example {
-    text-align: left;
-    border: none;
-    background: none;
-    cursor: pointer;
-    color: var(--color-accent);
-    padding: 0;
-  }
-</style>
