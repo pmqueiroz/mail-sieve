@@ -2,7 +2,7 @@
   import { api, errorMessage } from '../api';
   import { formatNumber } from '../format';
   import { toasts } from '../toasts.svelte';
-  import type { Group, UnsubscribeOutcome } from '../types';
+  import type { ActionResponse, Group, UnsubscribeOutcome } from '../types';
   import Button from './Button.svelte';
   import Modal from './Modal.svelte';
   import Pill, { type PillTone } from './Pill.svelte';
@@ -55,12 +55,14 @@
         continue;
       }
       try {
-        const response = await api.post<{ outcome: UnsubscribeOutcome; job_id: number | null }>(`/accounts/${accountId}/unsubscribe`, {
+        const response = await api.post<ActionResponse & { outcome: UnsubscribeOutcome }>(`/accounts/${accountId}/unsubscribe`, {
           from_addr: sender.key,
           then: followUp === 'keep' ? null : followUp,
         });
         if (response.job_id !== null) queued += 1;
-        collected.push(describe(name, response.outcome));
+        const result = describe(name, response.outcome);
+        if (response.skipped_pinned > 0) result.note = `${result.note}. Pinned, so its messages stay where they are`;
+        collected.push(result);
       } catch (error) {
         collected.push({ name, label: 'Failed', note: errorMessage(error), tone: 'bad', url: null });
       }
