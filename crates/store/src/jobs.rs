@@ -169,8 +169,8 @@ pub fn set_progress(conn: &Connection, id: i64, done: u64, total: u64) -> Result
 
 pub fn finish(conn: &Connection, id: i64, state: &str, error: Option<&str>) -> Result<()> {
     conn.execute(
-        "UPDATE jobs SET state = ?2, error = ?3, finished_at = ?4 WHERE id = ?1",
-        params![id, state, error, now()],
+        "UPDATE jobs SET state = ?2, error = ?3, finished_at = ?4 WHERE id = ?1 AND state != ?5",
+        params![id, state, error, now(), CANCELLED],
     )?;
     if state != FAILED {
         conn.execute("DELETE FROM job_targets WHERE job_id = ?1", [id])?;
@@ -280,5 +280,7 @@ mod tests {
         assert!(store.write(|tx| cancel(tx, job.id)).unwrap());
         assert!(store.read(|conn| is_cancelled(conn, job.id)).unwrap());
         assert!(!store.write(|tx| cancel(tx, job.id)).unwrap());
+        store.write(|tx| finish(tx, job.id, DONE, None)).unwrap();
+        assert_eq!(store.read(|conn| get(conn, job.id)).unwrap().state, CANCELLED);
     }
 }
