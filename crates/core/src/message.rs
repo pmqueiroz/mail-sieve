@@ -38,4 +38,37 @@ pub struct MessageMeta {
     pub flags: Flags,
     pub list_id: Option<String>,
     pub unsubscribe: Unsubscribe,
+    pub labels: Vec<String>,
+}
+
+pub fn normalize_label(label: &str) -> String {
+    label.trim().trim_start_matches('\\').to_lowercase()
+}
+
+pub const LABEL_SEPARATOR: char = '\u{1f}';
+
+pub fn join_labels(labels: &[String]) -> Option<String> {
+    if labels.is_empty() {
+        return None;
+    }
+    let mut normalized: Vec<String> = labels.iter().map(|label| normalize_label(label)).collect();
+    normalized.sort();
+    normalized.dedup();
+    Some(normalized.join(&LABEL_SEPARATOR.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn joins_normalized_labels() {
+        let labels = vec![
+            "\\Inbox".to_string(),
+            "Receipts".to_string(),
+            "\\inbox".to_string(),
+        ];
+        assert_eq!(join_labels(&labels).as_deref(), Some("inbox\u{1f}receipts"));
+        assert_eq!(join_labels(&[]), None);
+    }
 }
