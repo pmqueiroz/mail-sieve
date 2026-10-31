@@ -1,8 +1,10 @@
+mod action;
 mod flags;
 mod message;
 pub mod query;
 mod uid_set;
 
+pub use action::{Action, UnknownAction};
 pub use flags::Flags;
 pub use message::{Address, MessageMeta, Unsubscribe};
 pub use query::{Query, QueryError, Term, TermKind};
