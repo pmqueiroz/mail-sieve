@@ -110,6 +110,7 @@ pub async fn count(
 #[derive(Deserialize)]
 pub struct ActionBody {
     query: Option<String>,
+    queries: Option<Vec<String>>,
     ids: Option<Vec<i64>>,
     action: String,
     #[serde(default)]
@@ -127,9 +128,21 @@ pub async fn action(
     Json(body): Json<ActionBody>,
 ) -> Result<Json<Value>> {
     let action = parse_action(&body.action)?;
-    let selection = match (body.ids, body.query) {
-        (Some(ids), _) if !ids.is_empty() => Selection::Ids(ids),
-        (_, query) => {
+    let selection = match (body.ids, body.queries, body.query) {
+        (Some(ids), _, _) if !ids.is_empty() => Selection::Ids(ids),
+        (_, Some(queries), _) if !queries.is_empty() => {
+            let parsed = queries
+                .iter()
+                .map(|raw| parse_query(Some(raw)))
+                .collect::<Result<Vec<_>>>()?;
+            if parsed.iter().any(Query::is_empty) {
+                return Err(Error::BadRequest(
+                    "every query in a batch needs at least one term".into(),
+                ));
+            }
+            Selection::AnyOf(parsed)
+        }
+        (_, _, query) => {
             let query = parse_query(query.as_deref())?;
             if query.is_empty() && !body.confirm {
                 return Err(Error::BadRequest(

@@ -302,6 +302,19 @@ async fn full_flow_against_dovecot() {
         .await;
     assert_eq!(harness.count(account_id, "is:read").await, 5);
 
+    let (_, response) = harness
+        .call(
+            "POST",
+            &format!("/api/accounts/{account_id}/actions"),
+            Some(json!({ "queries": ["from:alice@friends.example subject:\"Message 299\"", "from:news@paper.example subject:\"Message 298\""], "action": "flag" })),
+        )
+        .await;
+    let job = harness
+        .wait_for_job(response["job_id"].as_i64().unwrap())
+        .await;
+    assert_eq!(job["total"], 2, "{job}");
+    assert_eq!(harness.count(account_id, "is:flagged").await, 2);
+
     let (status, preview) = harness
         .call("GET", &format!("/api/messages/{}/preview", ids[0]), None)
         .await;

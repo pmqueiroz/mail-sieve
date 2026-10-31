@@ -18,6 +18,7 @@ const GMAIL_INBOX_LABEL: &str = "\\Inbox";
 
 pub enum Selection {
     Query(Query),
+    AnyOf(Vec<Query>),
     Ids(Vec<i64>),
 }
 
@@ -41,6 +42,15 @@ pub async fn enqueue(
         .write(move |tx| {
             let targets = match &selection {
                 Selection::Query(query) => search::targets(tx, account_id, query, now)?,
+                Selection::AnyOf(queries) => {
+                    let mut union = Vec::new();
+                    for query in queries {
+                        union.extend(search::targets(tx, account_id, query, now)?);
+                    }
+                    union.sort_by_key(|target| (target.mailbox_id, target.uid));
+                    union.dedup();
+                    union
+                }
                 Selection::Ids(ids) => search::targets_for_ids(tx, account_id, ids)?,
             };
             if targets.is_empty() {
