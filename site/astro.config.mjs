@@ -4,15 +4,16 @@ import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 import { callouts } from './src/plugins/callouts.ts';
 
-const site = process.env.SITE_URL ?? 'https://pmqueiroz.github.io';
-const base = process.env.SITE_BASE ?? '/mail-sieve';
+const site = process.env.SITE_URL ?? 'https://mailsieve.pmqueiroz.dev';
+const base = process.env.SITE_BASE ?? '/';
+const basePath = base.replace(/\/$/, '');
 
 export default defineConfig({
   site,
   base,
   trailingSlash: 'always',
   build: { format: 'directory', inlineStylesheets: 'always' },
-  redirects: { '/docs': `${base}/docs/intro/` },
+  redirects: { '/docs': `${basePath}/docs/intro/` },
   integrations: [sitemap()],
   markdown: {
     syntaxHighlight: false,

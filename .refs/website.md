@@ -64,13 +64,14 @@ description, `lead` is the visible subtitle.
 
 ## Base path and site URL
 
-`astro.config.mjs` reads `SITE_URL` (default `https://pmqueiroz.github.io`)
-and `SITE_BASE` (default `/mail-sieve`), which fits a GitHub Pages project
-site. For a custom domain build with `SITE_URL=https://example.com
-SITE_BASE=/`. Every internal link goes through `lib/paths.ts`
-(`href`, `docHref`) so the base is never hard-coded. Under a base path
-`robots.txt` is not at the domain root and crawlers ignore it; the sitemap
-link in the head still works.
+`astro.config.mjs` reads `SITE_URL` (default
+`https://mailsieve.pmqueiroz.dev`) and `SITE_BASE` (default `/`). To serve
+from a sub-path, for example the plain GitHub Pages project URL, build with
+`SITE_URL=https://pmqueiroz.github.io SITE_BASE=/mail-sieve`. Every internal
+link goes through `lib/paths.ts` (`href`, `docHref`) so the base is never
+hard-coded. Under a sub-path `robots.txt` is not at the domain root and
+crawlers ignore it; the sitemap link in the head still works.
+`public/CNAME` holds the custom domain.
 
 ## Docs authoring
 
@@ -158,7 +159,7 @@ messages", "Last run 09:15").
 ```sh
 cd site
 npm install
-npm run dev       # http://localhost:4321/mail-sieve/
+npm run dev       # http://localhost:4321/
 npm run check     # astro check
 npm run build     # static output in site/dist
 npm run preview
