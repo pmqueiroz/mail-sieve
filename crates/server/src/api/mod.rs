@@ -35,6 +35,7 @@ pub fn router(state: AppState) -> Router {
         .route("/accounts/{id}/groups", get(mail::groups))
         .route("/accounts/{id}/messages", get(mail::messages))
         .route("/accounts/{id}/count", get(mail::count))
+        .route("/accounts/{id}/overview", get(mail::overview))
         .route("/accounts/{id}/actions", post(mail::action))
         .route("/accounts/{id}/unsubscribe", post(mail::unsubscribe))
         .route("/messages/{id}/preview", get(mail::preview))

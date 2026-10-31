@@ -3,6 +3,7 @@ mod error;
 pub mod jobs;
 pub mod mailboxes;
 pub mod messages;
+pub mod overview;
 pub mod rules;
 pub mod search;
 pub mod sessions;

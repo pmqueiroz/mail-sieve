@@ -107,6 +107,19 @@ pub async fn count(
     ))
 }
 
+pub async fn overview(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<mail_sieve_store::overview::Overview>> {
+    accounts::load(&state, id).await?;
+    let now = mail_sieve_store::now();
+    Ok(Json(
+        state
+            .read(move |c| mail_sieve_store::overview::overview(c, id, now))
+            .await?,
+    ))
+}
+
 #[derive(Deserialize)]
 pub struct ActionBody {
     query: Option<String>,

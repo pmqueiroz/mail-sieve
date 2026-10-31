@@ -128,6 +128,18 @@ the `category:` filter always agree: both use the same expression. Order
 matters: a receipt from a mailing list is a receipt. Singular names
 (`category:receipt`) and `cat:` are accepted.
 
+## Overview stats
+
+`GET /accounts/{id}/overview` (`store::overview`) answers the Overview
+page in one call: totals, unread (and unread from the last 7 days),
+mailing-list messages, sender count, the "never opened" slice, bytes freed
+in the last 7 days (`action_log.bytes`), and category counts over the last
+12 months. "Never opened" means senders whose every indexed message is
+still unread (`senders.unread_count = message_count`); the same slice is
+what the page calls "space you can recover". All of it reads the
+materialized `senders` table or one pass over `messages`, so it stays in
+the low milliseconds like the other counts.
+
 ## Providers
 
 `imap::Provider` is detected from capabilities (`X-GM-EXT-1` means Gmail).
