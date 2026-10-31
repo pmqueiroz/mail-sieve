@@ -12,8 +12,8 @@
   import type { PluginEntry, PluginSource } from '../lib/plugins/types';
   import { toasts } from '../lib/toasts.svelte';
 
-  const SECTIONS: { source: PluginSource; title: string; note: string }[] = [
-    { source: 'core', title: 'Core', note: 'Ship with mailsieve' },
+  const SECTIONS: { source: PluginSource; title: string; note?: string }[] = [
+    { source: 'core', title: 'Core' },
     { source: 'community', title: 'Community', note: 'Installed from the plugins directory' },
   ];
 
@@ -78,7 +78,9 @@
       <section class="flex flex-col gap-8" aria-label="{section.title} plugins">
         <div class="flex items-baseline gap-6">
           <h2 class="m-0 text-lg font-semibold">{section.title}</h2>
-          <span class="text-sm text-ink3"><BrandText text={section.note} /></span>
+          {#if section.note}
+            <span class="text-sm text-ink3"><BrandText text={section.note} /></span>
+          {/if}
         </div>
         {#if entries.length > 0}
           <div class="grid grid-cols-[repeat(auto-fill,minmax(--spacing(160),1fr))] gap-8">
