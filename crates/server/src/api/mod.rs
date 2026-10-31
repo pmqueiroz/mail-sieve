@@ -38,6 +38,14 @@ pub fn router(state: AppState) -> Router {
         .route("/accounts/{id}/overview", get(mail::overview))
         .route("/accounts/{id}/actions", post(mail::action))
         .route("/accounts/{id}/unsubscribe", post(mail::unsubscribe))
+        .route(
+            "/accounts/{id}/unsubscribes/pending",
+            get(mail::pending_unsubscribes),
+        )
+        .route(
+            "/accounts/{id}/unsubscribes/done",
+            post(mail::finish_unsubscribe),
+        )
         .route("/messages/{id}/preview", get(mail::preview))
         .route("/jobs", get(jobs::list))
         .route("/jobs/{id}", get(jobs::get))

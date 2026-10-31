@@ -186,7 +186,12 @@ Adding a provider: extend `Provider` (detection, `default_sync`,
 
 Order: one-click POST if the sender advertises it, then mailto via the
 account's SMTP settings, then hand the HTTPS link back to the UI. Outcomes
-are stored in `unsubscribes` and shown as sender badges. An optional
+are stored in `unsubscribes` and shown as sender badges. A link outcome is
+stored as `link_opened` with the URL in `detail`; it stays in Activity's
+"links still need you" list (`GET /accounts/{id}/unsubscribes/pending`)
+until the user marks it done (`POST .../unsubscribes/done`), which flips it
+to `completed`. The URLs are http(s) only because the header parser drops
+every other scheme, so the UI can render them as links. An optional
 follow-up action (archive or trash, never delete) is enqueued for
 `from:<sender>`. See [security.md](./security.md) for the SSRF guard.
 

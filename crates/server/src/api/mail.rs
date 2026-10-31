@@ -215,8 +215,8 @@ pub async fn unsubscribe(
         ),
         Ok(Outcome::OpenLink(url)) => (
             "link",
-            "link_opened",
-            None,
+            mail_sieve_store::unsubscribes::LINK_OPENED,
+            Some(url.clone()),
             json!({ "status": "open_link", "url": url }),
         ),
         Err(error) => (
@@ -248,6 +248,38 @@ pub async fn unsubscribe(
         _ => None,
     };
     Ok(Json(json!({ "outcome": response, "job_id": job_id })))
+}
+
+pub async fn pending_unsubscribes(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<Vec<mail_sieve_store::unsubscribes::PendingLink>>> {
+    accounts::load(&state, id).await?;
+    Ok(Json(
+        state
+            .read(move |c| mail_sieve_store::unsubscribes::pending_links(c, id))
+            .await?,
+    ))
+}
+
+#[derive(Deserialize)]
+pub struct LinkDoneBody {
+    from_addr: String,
+}
+
+pub async fn finish_unsubscribe(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Json(body): Json<LinkDoneBody>,
+) -> Result<Json<Value>> {
+    let from_addr = body.from_addr.trim().to_lowercase();
+    let updated = state
+        .write(move |tx| mail_sieve_store::unsubscribes::mark_link_done(tx, id, &from_addr))
+        .await?;
+    if !updated {
+        return Err(Error::Store(mail_sieve_store::Error::NotFound));
+    }
+    Ok(Json(json!({ "ok": true })))
 }
 
 pub async fn preview(State(state): State<AppState>, Path(id): Path<i64>) -> Result<Json<Value>> {
