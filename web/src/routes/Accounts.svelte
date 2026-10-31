@@ -4,23 +4,25 @@
   import Button from '../lib/components/Button.svelte';
   import ConfirmDialog from '../lib/components/ConfirmDialog.svelte';
   import Field from '../lib/components/Field.svelte';
+  import GuideModal from '../lib/components/GuideModal.svelte';
   import Modal from '../lib/components/Modal.svelte';
   import ProgressBar from '../lib/components/ProgressBar.svelte';
   import { formatBytes, formatNumber, formatRelative } from '../lib/format';
+  import { guides, isAuthenticationFailure } from '../lib/guides';
   import { router } from '../lib/router.svelte';
   import { session } from '../lib/session.svelte';
   import { toasts } from '../lib/toasts.svelte';
   import type { Account, Mailbox } from '../lib/types';
 
-  type Preset = { id: string; label: string; imap: string; smtp: string; smtpPort: number; note?: string };
+  type Preset = { id: string; label: string; imap: string; smtp: string; smtpPort: number; appPassword: boolean };
 
   const presets: Preset[] = [
-    { id: 'gmail', label: 'Gmail', imap: 'imap.gmail.com', smtp: 'smtp.gmail.com', smtpPort: 587, note: 'Use an app password (Google Account, Security, App passwords) or Google sign-in if configured.' },
-    { id: 'outlook', label: 'Outlook / Microsoft 365', imap: 'outlook.office365.com', smtp: 'smtp.office365.com', smtpPort: 587, note: 'Microsoft requires OAuth for most accounts; configure Microsoft sign-in.' },
-    { id: 'icloud', label: 'iCloud', imap: 'imap.mail.me.com', smtp: 'smtp.mail.me.com', smtpPort: 587, note: 'Use an app-specific password from appleid.apple.com.' },
-    { id: 'yahoo', label: 'Yahoo', imap: 'imap.mail.yahoo.com', smtp: 'smtp.mail.yahoo.com', smtpPort: 465, note: 'Generate an app password in Yahoo account security.' },
-    { id: 'fastmail', label: 'Fastmail', imap: 'imap.fastmail.com', smtp: 'smtp.fastmail.com', smtpPort: 465, note: 'Use an app password from Fastmail settings.' },
-    { id: 'custom', label: 'Other IMAP server', imap: '', smtp: '', smtpPort: 587 },
+    { id: 'gmail', label: 'Gmail', imap: 'imap.gmail.com', smtp: 'smtp.gmail.com', smtpPort: 587, appPassword: true },
+    { id: 'outlook', label: 'Outlook / Microsoft 365', imap: 'outlook.office365.com', smtp: 'smtp.office365.com', smtpPort: 587, appPassword: false },
+    { id: 'icloud', label: 'iCloud', imap: 'imap.mail.me.com', smtp: 'smtp.mail.me.com', smtpPort: 587, appPassword: true },
+    { id: 'yahoo', label: 'Yahoo', imap: 'imap.mail.yahoo.com', smtp: 'smtp.mail.yahoo.com', smtpPort: 465, appPassword: true },
+    { id: 'fastmail', label: 'Fastmail', imap: 'imap.fastmail.com', smtp: 'smtp.fastmail.com', smtpPort: 465, appPassword: true },
+    { id: 'custom', label: 'Other IMAP server', imap: '', smtp: '', smtpPort: 587, appPassword: false },
   ];
 
   const blankForm = () => ({
@@ -47,8 +49,16 @@
   let confirmRemove = $state(false);
   let foldersOpen = $state(false);
   let settingsOpen = $state(false);
+  let guideOpen = $state(false);
+  let guideNotice = $state<string | null>(null);
 
   const preset = $derived(presets.find((candidate) => candidate.id === form.preset));
+  const guide = $derived(guides[form.preset] ?? guides.custom!);
+
+  function openGuide(notice: string | null = null) {
+    guideNotice = notice;
+    guideOpen = true;
+  }
 
   $effect(() => {
     const added = router.params.get('added');
@@ -79,7 +89,7 @@
         label: form.label,
         email: form.email,
         username: form.username,
-        password: form.password,
+        password: preset?.appPassword ? form.password.replace(/\s+/g, '') : form.password,
         imap_host: form.imap_host,
         imap_port: Number(form.imap_port),
         security: form.security,
@@ -92,7 +102,16 @@
       session.selectAccount(account.id);
       toasts.show(`Connected ${account.email}. The first sync has started.`, 'success');
     } catch (error) {
-      toasts.show(errorMessage(error), 'error', 10000);
+      const message = errorMessage(error);
+      if (isAuthenticationFailure(message)) {
+        openGuide(
+          preset?.appPassword
+            ? `${preset.label} rejected the email and password. This usually means the normal account password was used instead of an app password. Follow the steps below.`
+            : 'The server rejected the email and password. Check them and follow the steps below.',
+        );
+      } else {
+        toasts.show(message, 'error', 10000);
+      }
     } finally {
       saving = false;
     }
@@ -229,6 +248,13 @@
     </div>
     <p class="muted divider">or connect with a password</p>
   {/if}
+  <button type="button" class="guide-banner" onclick={() => openGuide()}>
+    <span class="guide-icon" aria-hidden="true">?</span>
+    <span>
+      <strong>New here? See how to connect {preset?.label ?? 'your account'}</strong>
+      <span class="muted">Step-by-step, takes about two minutes.</span>
+    </span>
+  </button>
   <form id="add-account" class="grid" onsubmit={add}>
     <Field label="Provider">
       <select bind:value={form.preset} onchange={applyPreset}>
@@ -239,7 +265,7 @@
     <Field label="Email address"><input type="email" required bind:value={form.email} autocomplete="email" /></Field>
     <Field label="Username" hint="Defaults to the email address"><input type="text" bind:value={form.username} autocomplete="username" /></Field>
     <div class="wide">
-      <Field label="Password or app password" hint={preset?.note}>
+      <Field label={preset?.appPassword ? 'App password' : 'Password'} hint={preset?.appPassword ? 'Not your normal password. Use the app password from the guide above.' : undefined}>
         <input type="password" required bind:value={form.password} autocomplete="current-password" />
       </Field>
     </div>
@@ -261,6 +287,8 @@
     <Button variant="primary" type="submit" form="add-account" busy={saving}>Connect</Button>
   {/snippet}
 </Modal>
+
+<GuideModal bind:open={guideOpen} {guide} notice={guideNotice} />
 
 <Modal bind:open={foldersOpen} title="Folders for {folderAccount?.label ?? ''}" width={560}>
   <p class="muted">Only synced folders are indexed. Gmail accounts sync All Mail, which already contains every label, so other Gmail folders are off by default to avoid counting messages twice.</p>
@@ -352,6 +380,34 @@
   .welcome h2,
   .welcome p {
     margin: 0;
+  }
+  .guide-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-3);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    background: var(--color-accent-soft);
+    text-align: left;
+    cursor: pointer;
+  }
+  .guide-banner > span:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .guide-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--color-accent);
+    color: var(--color-accent-text);
+    font-weight: 700;
   }
   .oauth {
     display: flex;
