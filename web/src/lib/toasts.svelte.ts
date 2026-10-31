@@ -25,8 +25,10 @@ const FINISHED_JOB_TIMEOUT = 8000;
 class Toasts {
   items = $state<Toast[]>([]);
   raised = $state(false);
+  shifted = $state(false);
   private next = 1;
   private expiring = new Set<number>();
+  private silenced = new Set<number>();
 
   show(message: string, kind: ToastKind = 'info', timeout = MESSAGE_TIMEOUT) {
     const id = this.next++;
@@ -39,8 +41,12 @@ class Toasts {
     this.items.push({ id: this.next++, type: 'job', ...job });
   }
 
+  silence(jobId: number) {
+    this.silenced.add(jobId);
+  }
+
   tracks(jobId: number): boolean {
-    return this.items.some((toast) => toast.type === 'job' && toast.jobId === jobId);
+    return this.silenced.has(jobId) || this.items.some((toast) => toast.type === 'job' && toast.jobId === jobId);
   }
 
   expire(id: number) {

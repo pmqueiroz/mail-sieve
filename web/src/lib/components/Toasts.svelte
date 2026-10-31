@@ -51,7 +51,7 @@
   </div>
 {/snippet}
 
-<div class="fixed right-12 z-36 flex w-170 max-w-[calc(100vw-var(--spacing)*16)] flex-col gap-4 {toasts.raised ? 'bottom-48' : 'bottom-12'}" aria-live="polite">
+<div class="fixed right-12 z-36 {toasts.shifted ? 'wide:right-84' : ''} flex w-170 max-w-[calc(100vw-var(--spacing)*16)] flex-col gap-4 {toasts.raised ? 'bottom-48' : 'bottom-12'}" aria-live="polite">
   {#each toasts.items as toast (toast.id)}
     {#if toast.type === 'message'}
       {@const [icon, tone] = messageIcons[toast.kind]}

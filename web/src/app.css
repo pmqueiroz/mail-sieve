@@ -102,11 +102,186 @@
   --color-sieve-coral: #ff8a7a;
   --color-sieve-amber: #ffc96b;
   --color-sieve-mint: #8edc86;
+  --color-ghoul-hi: #ffffff;
+  --color-ghoul-body: #f5f3fc;
+  --color-ghoul-shade: #dcd5f5;
+  --color-ghoul-stroke: #c9c0ee;
+  --color-ghoul-eye: #17161d;
+  --color-ghoul-accent: #8f82e0;
+  --color-ghoul-alert: #e8b451;
+  --color-ghoul-ground: rgba(40, 30, 90, 0.16);
 
   --shadow-*: initial;
   --shadow-pop: 0 12px 40px rgba(20, 20, 30, 0.12);
   --shadow-card: 0 24px 60px rgba(20, 20, 30, 0.14);
   --shadow-knob: 0 2px 10px rgba(0, 0, 0, 0.12);
+
+  --drop-shadow-*: initial;
+  --drop-shadow-ghoul: 0 10px 22px rgba(110, 95, 208, 0.28);
+
+  --animate-ghoul-float: ghoul-float 3.6s ease-in-out infinite;
+  --animate-ghoul-ground: ghoul-ground 3.6s ease-in-out infinite;
+  --animate-ghoul-blink: ghoul-blink 4.6s infinite;
+  --animate-ghoul-tail: ghoul-tail 1.8s ease-in-out infinite;
+  --animate-ghoul-tail-slow: ghoul-tail 3.4s ease-in-out infinite;
+  --animate-ghoul-wave: ghoul-wave 1.4s ease-in-out infinite;
+  --animate-ghoul-wave-fast: ghoul-wave 0.9s ease-in-out infinite;
+  --animate-ghoul-wave-back: ghoul-wave-back 0.9s ease-in-out infinite;
+  --animate-ghoul-bounce: ghoul-bounce 0.9s ease-in-out infinite;
+  --animate-ghoul-jitter: ghoul-jitter 2.4s ease-in-out infinite;
+  --animate-ghoul-dot: ghoul-dot 1.1s ease-in-out infinite;
+  --animate-ghoul-thought: ghoul-dot 1.3s ease-in-out infinite;
+  --animate-ghoul-z: ghoul-z 2.2s ease-out infinite;
+  --animate-ghoul-spark: ghoul-spark 1.4s ease-in-out infinite;
+  --animate-balloon-pop: balloon-pop 0.38s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+  --animate-balloon-fade: balloon-pop 0.3s ease-out both;
+  --animate-countdown: countdown 3s linear both;
+
+  @keyframes ghoul-float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-9px);
+    }
+  }
+  @keyframes ghoul-ground {
+    0%,
+    100% {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scaleX(0.72);
+      opacity: 0.55;
+    }
+  }
+  @keyframes ghoul-blink {
+    0%,
+    90%,
+    100% {
+      transform: scaleY(1);
+    }
+    94% {
+      transform: scaleY(0.08);
+    }
+  }
+  @keyframes ghoul-tail {
+    0%,
+    100% {
+      d: path('M20 62 C20 39.9 37.9 22 60 22 C82.1 22 100 39.9 100 62 L100 116 Q93.3 128 86.7 116 Q80 104 73.3 116 Q66.7 128 60 116 Q53.3 104 46.7 116 Q40 128 33.3 116 Q26.7 104 20 116 Z');
+    }
+    50% {
+      d: path('M20 62 C20 39.9 37.9 22 60 22 C82.1 22 100 39.9 100 62 L100 116 Q93.3 104 86.7 116 Q80 128 73.3 116 Q66.7 104 60 116 Q53.3 128 46.7 116 Q40 104 33.3 116 Q26.7 128 20 116 Z');
+    }
+  }
+  @keyframes ghoul-wave {
+    0%,
+    100% {
+      transform: rotate(0);
+    }
+    50% {
+      transform: rotate(-30deg);
+    }
+  }
+  @keyframes ghoul-wave-back {
+    0%,
+    100% {
+      transform: rotate(0);
+    }
+    50% {
+      transform: rotate(30deg);
+    }
+  }
+  @keyframes ghoul-bounce {
+    0%,
+    100% {
+      transform: translateY(0) scale(1, 1);
+    }
+    35% {
+      transform: translateY(-14px) scale(0.97, 1.03);
+    }
+    70% {
+      transform: translateY(0) scale(1.05, 0.95);
+    }
+  }
+  @keyframes ghoul-jitter {
+    0%,
+    60%,
+    100% {
+      transform: rotate(0);
+    }
+    64% {
+      transform: rotate(-6deg);
+    }
+    68% {
+      transform: rotate(6deg);
+    }
+    72% {
+      transform: rotate(-4deg);
+    }
+    76% {
+      transform: rotate(3deg);
+    }
+    80% {
+      transform: rotate(0);
+    }
+  }
+  @keyframes ghoul-dot {
+    0%,
+    80%,
+    100% {
+      opacity: 0.25;
+      transform: translateY(0);
+    }
+    40% {
+      opacity: 1;
+      transform: translateY(-3px);
+    }
+  }
+  @keyframes ghoul-z {
+    0% {
+      opacity: 0;
+      transform: translate(0, 0) scale(0.6);
+    }
+    30% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(12px, -26px) scale(1.1);
+    }
+  }
+  @keyframes ghoul-spark {
+    0%,
+    100% {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes balloon-pop {
+    0% {
+      opacity: 0;
+      transform: translateY(10px) scale(0.94);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes countdown {
+    from {
+      width: 100%;
+    }
+    to {
+      width: 0;
+    }
+  }
 
   --blur-*: initial;
   --blur-glass: 6px;
@@ -138,6 +313,8 @@
     --color-overlay: rgba(0, 0, 0, 0.55);
     --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.5);
     --shadow-card: 0 24px 60px rgba(0, 0, 0, 0.45);
+    --color-ghoul-ground: rgba(143, 130, 224, 0.28);
+    --drop-shadow-ghoul: 0 0 26px rgba(143, 130, 224, 0.55);
   }
 }
 
