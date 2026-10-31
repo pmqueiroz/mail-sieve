@@ -31,6 +31,10 @@ Images are published for `linux/amd64` and `linux/arm64`. `latest` is the
 newest release and `edge` follows `main`. To build it yourself instead:
 `docker build -t mail-sieve .`
 
+No Docker? Every [release](https://github.com/pmqueiroz/mail-sieve/releases/latest)
+also ships standalone binaries for Linux (static, x86_64 and ARM64), macOS
+(Apple silicon and Intel) and Windows: unpack and run `./mail-sieve serve`.
+
 Or with compose: `docker compose -f docker/compose.yml up -d` (set `MAIL_SIEVE_PORT` to use a host port other than 8080, and `MAIL_SIEVE_HOST_IP=0.0.0.0` to reach it from other devices; both can live in `docker/.env`).
 
 Open http://localhost:8080, choose an admin password, then add an account.
