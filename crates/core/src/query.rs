@@ -23,6 +23,7 @@ pub enum TermKind {
     Unread,
     Flagged,
     Answered,
+    Pinned,
     HasUnsubscribe,
     HasList,
     OlderThan(i64),
@@ -165,6 +166,7 @@ fn parse_token(token: Token) -> Result<Term, QueryError> {
             }
             "flagged" | "starred" => TermKind::Flagged,
             "answered" | "replied" => TermKind::Answered,
+            "pinned" | "protected" => TermKind::Pinned,
             _ => return Err(invalid()),
         },
         "has" => match value.to_ascii_lowercase().as_str() {
@@ -287,6 +289,7 @@ mod tests {
             kinds("-has:unsubscribe"),
             vec![(true, TermKind::HasUnsubscribe)]
         );
+        assert_eq!(kinds("-is:pinned"), vec![(true, TermKind::Pinned)]);
     }
 
     #[test]

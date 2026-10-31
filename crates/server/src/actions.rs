@@ -42,18 +42,17 @@ pub async fn enqueue(
     let job_id = state
         .write(move |tx| {
             let targets = match &selection {
-                Selection::Query(query) => search::targets(tx, account_id, query, now)?,
+                Selection::Query(query) => search::resolve(tx, account_id, query, now, true)?,
                 Selection::AnyOf(queries) => {
-                    let mut union = Vec::new();
+                    let mut union = search::Resolved::default();
                     for query in queries {
-                        union.extend(search::targets(tx, account_id, query, now)?);
+                        union.merge(search::resolve(tx, account_id, query, now, true)?);
                     }
-                    union.sort_by_key(|target| (target.mailbox_id, target.uid));
-                    union.dedup();
                     union
                 }
-                Selection::Ids(ids) => search::targets_for_ids(tx, account_id, ids)?,
-            };
+                Selection::Ids(ids) => search::resolve_ids(tx, account_id, ids, true)?,
+            }
+            .targets;
             if targets.is_empty() {
                 return Ok(None);
             }

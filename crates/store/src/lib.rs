@@ -4,6 +4,7 @@ pub mod jobs;
 pub mod mailboxes;
 pub mod messages;
 pub mod overview;
+pub mod pins;
 pub mod rules;
 pub mod search;
 pub mod sessions;
@@ -21,6 +22,7 @@ use rusqlite::{OpenFlags, TransactionBehavior};
 const MIGRATIONS: &[&str] = &[
     include_str!("schema.sql"),
     include_str!("migration_002.sql"),
+    include_str!("migration_003.sql"),
 ];
 const MAX_IDLE_READERS: usize = 8;
 

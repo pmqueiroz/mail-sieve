@@ -4,6 +4,7 @@ use rusqlite::{Connection, Row, params_from_iter};
 use serde::{Deserialize, Serialize};
 
 use crate::Result;
+use crate::pins::{self, Pin};
 
 const SEEN: i64 = 1;
 const ANSWERED: i64 = 2;
@@ -130,6 +131,10 @@ fn fts_expression(text: &str) -> String {
         .join(" ")
 }
 
+fn message_pinned_sql() -> String {
+    pins::pinned_sql("m.account_id", "m.from_addr", "m.from_domain")
+}
+
 fn compile(account_id: i64, query: &Query, now: i64) -> Compiled {
     let mut compiled = Compiled::default();
     compiled.clauses.push("m.account_id = ?".into());
@@ -170,6 +175,7 @@ fn compile(account_id: i64, query: &Query, now: i64) -> Compiled {
             TermKind::Unread => compiled.push(negated, format!("(m.flags & {SEEN}) = 0"), []),
             TermKind::Flagged => compiled.push(negated, format!("(m.flags & {FLAGGED}) != 0"), []),
             TermKind::Answered => compiled.push(negated, format!("(m.flags & {ANSWERED}) != 0"), []),
+            TermKind::Pinned => compiled.push(negated, message_pinned_sql(), []),
             TermKind::HasUnsubscribe => {
                 compiled.push(negated, "m.unsub_http IS NOT NULL OR m.unsub_mailto IS NOT NULL".into(), [])
             }
@@ -203,21 +209,25 @@ fn compile(account_id: i64, query: &Query, now: i64) -> Compiled {
 pub struct Totals {
     pub count: u64,
     pub bytes: u64,
+    pub pinned: u64,
 }
 
 pub fn totals(conn: &Connection, account_id: i64, query: &Query, now: i64) -> Result<Totals> {
     let compiled = compile(account_id, query, now);
     let sql = format!(
-        "SELECT COUNT(*), COALESCE(SUM(m.size), 0) FROM messages m WHERE {}",
+        "SELECT COUNT(*), COALESCE(SUM(m.size), 0), COALESCE(SUM({}), 0) FROM messages m WHERE {}",
+        message_pinned_sql(),
         compiled.where_sql()
     );
     let mut stmt = conn.prepare_cached(&sql)?;
-    let (count, bytes): (i64, i64) = stmt.query_row(params_from_iter(compiled.params), |row| {
-        Ok((row.get(0)?, row.get(1)?))
-    })?;
+    let (count, bytes, pinned): (i64, i64, i64) = stmt
+        .query_row(params_from_iter(compiled.params), |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })?;
     Ok(Totals {
         count: count as u64,
         bytes: bytes as u64,
+        pinned: pinned as u64,
     })
 }
 
@@ -236,6 +246,7 @@ pub struct MessageRow {
     pub flagged: bool,
     pub list_id: Option<String>,
     pub has_unsubscribe: bool,
+    pub pinned: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -260,6 +271,7 @@ fn message_row(row: &Row<'_>) -> rusqlite::Result<MessageRow> {
         unread: flags & SEEN == 0,
         flagged: flags & FLAGGED != 0,
         has_unsubscribe: row.get(11)?,
+        pinned: row.get(12)?,
     })
 }
 
@@ -281,9 +293,10 @@ pub fn messages(
     compiled.params.push(Value::Integer(i64::from(limit)));
     let sql = format!(
         "SELECT m.id, m.mailbox_id, b.name, m.uid, m.from_addr, m.from_name, m.subject, m.date, m.size, \
-         m.list_id, m.flags, (m.unsub_http IS NOT NULL OR m.unsub_mailto IS NOT NULL) \
+         m.list_id, m.flags, (m.unsub_http IS NOT NULL OR m.unsub_mailto IS NOT NULL), {} \
          FROM messages m JOIN mailboxes b ON b.id = m.mailbox_id \
          WHERE {} ORDER BY m.date DESC, m.id DESC LIMIT ?",
+        message_pinned_sql(),
         compiled.where_sql()
     );
     let mut stmt = conn.prepare_cached(&sql)?;
@@ -299,39 +312,82 @@ pub struct Target {
     pub uid: u32,
 }
 
-pub fn targets(conn: &Connection, account_id: i64, query: &Query, now: i64) -> Result<Vec<Target>> {
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Resolved {
+    pub targets: Vec<Target>,
+    pub skipped: Vec<Target>,
+}
+
+impl Resolved {
+    pub fn merge(&mut self, other: Resolved) {
+        self.targets.extend(other.targets);
+        self.skipped.extend(other.skipped);
+        self.normalize();
+    }
+
+    fn normalize(&mut self) {
+        for list in [&mut self.targets, &mut self.skipped] {
+            list.sort_by_key(|target| (target.mailbox_id, target.uid));
+            list.dedup();
+        }
+    }
+
+    fn collect(&mut self, mut rows: rusqlite::Rows<'_>, include_pinned: bool) -> Result<()> {
+        while let Some(row) = rows.next()? {
+            let target = Target {
+                mailbox_id: row.get(0)?,
+                uid: row.get(1)?,
+            };
+            let pinned: bool = row.get(2)?;
+            if pinned && !include_pinned {
+                self.skipped.push(target);
+            } else {
+                self.targets.push(target);
+            }
+        }
+        Ok(())
+    }
+}
+
+pub fn resolve(
+    conn: &Connection,
+    account_id: i64,
+    query: &Query,
+    now: i64,
+    include_pinned: bool,
+) -> Result<Resolved> {
     let compiled = compile(account_id, query, now);
     let sql = format!(
-        "SELECT m.mailbox_id, m.uid FROM messages m WHERE {} ORDER BY m.mailbox_id, m.uid",
+        "SELECT m.mailbox_id, m.uid, {} FROM messages m WHERE {} ORDER BY m.mailbox_id, m.uid",
+        message_pinned_sql(),
         compiled.where_sql()
     );
     let mut stmt = conn.prepare_cached(&sql)?;
-    let rows = stmt
-        .query_map(params_from_iter(compiled.params), |row| {
-            Ok(Target {
-                mailbox_id: row.get(0)?,
-                uid: row.get(1)?,
-            })
-        })?
-        .collect::<rusqlite::Result<_>>()?;
-    Ok(rows)
+    let mut resolved = Resolved::default();
+    resolved.collect(
+        stmt.query(params_from_iter(compiled.params))?,
+        include_pinned,
+    )?;
+    Ok(resolved)
 }
 
-pub fn targets_for_ids(conn: &Connection, account_id: i64, ids: &[i64]) -> Result<Vec<Target>> {
-    let mut stmt = conn
-        .prepare_cached("SELECT mailbox_id, uid FROM messages WHERE account_id = ?1 AND id = ?2")?;
-    let mut targets = Vec::with_capacity(ids.len());
+pub fn resolve_ids(
+    conn: &Connection,
+    account_id: i64,
+    ids: &[i64],
+    include_pinned: bool,
+) -> Result<Resolved> {
+    let sql = format!(
+        "SELECT m.mailbox_id, m.uid, {} FROM messages m WHERE m.account_id = ?1 AND m.id = ?2",
+        message_pinned_sql()
+    );
+    let mut stmt = conn.prepare_cached(&sql)?;
+    let mut resolved = Resolved::default();
     for id in ids {
-        let mut rows = stmt.query([account_id, *id])?;
-        if let Some(row) = rows.next()? {
-            targets.push(Target {
-                mailbox_id: row.get(0)?,
-                uid: row.get(1)?,
-            });
-        }
+        resolved.collect(stmt.query([account_id, *id])?, include_pinned)?;
     }
-    targets.sort_by_key(|target| (target.mailbox_id, target.uid));
-    Ok(targets)
+    resolved.normalize();
+    Ok(resolved)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -405,6 +461,8 @@ pub struct Group {
     pub unsub_mailto: Option<String>,
     pub unsub_one_click: bool,
     pub unsubscribe_status: Option<String>,
+    pub pinned_count: u64,
+    pub pin: Option<Pin>,
 }
 
 fn group_row(row: &Row<'_>) -> rusqlite::Result<Group> {
@@ -421,6 +479,8 @@ fn group_row(row: &Row<'_>) -> rusqlite::Result<Group> {
         unsub_mailto: row.get(9)?,
         unsub_one_click: row.get(10)?,
         unsubscribe_status: row.get(11)?,
+        pinned_count: row.get::<_, i64>(12)? as u64,
+        pin: pins::decode(row.get(13)?),
     })
 }
 
@@ -458,11 +518,27 @@ pub fn groups(conn: &Connection, request: &GroupRequest<'_>) -> Result<Vec<Group
             compiled.params,
         )
     };
-    let (key, extra_filter) = match request.group_by {
-        GroupBy::Sender => ("s.from_addr", ""),
-        GroupBy::Domain => ("s.from_domain", ""),
-        GroupBy::List => ("s.list_id", "WHERE s.list_id IS NOT NULL"),
+    let (key, extra_filter, pin, pinned_first) = match request.group_by {
+        GroupBy::Sender => (
+            "s.from_addr",
+            "",
+            pins::pin_sql("s.account_id", "s.from_addr", "s.from_domain"),
+            "pin IS NOT NULL DESC, ",
+        ),
+        GroupBy::Domain => (
+            "s.from_domain",
+            "",
+            pins::pin_sql("s.account_id", "NULL", "s.from_domain"),
+            "pin IS NOT NULL DESC, ",
+        ),
+        GroupBy::List => (
+            "s.list_id",
+            "WHERE s.list_id IS NOT NULL",
+            "NULL".to_string(),
+            "",
+        ),
     };
+    let sender_pinned = pins::pinned_sql("s.account_id", "s.from_addr", "s.from_domain");
     let sort = match request.sort_by {
         SortBy::Recent => "MAX(s.last_date)".to_string(),
         other => format!("SUM(s.{})", other.column()),
@@ -470,10 +546,11 @@ pub fn groups(conn: &Connection, request: &GroupRequest<'_>) -> Result<Vec<Group
     let sql = format!(
         "SELECT {key}, MAX(s.from_name), COUNT(*), SUM(s.message_count), SUM(s.unread_count), \
          SUM(s.total_size), MAX(s.last_date), MAX(s.list_id), MAX(s.unsub_http), MAX(s.unsub_mailto), \
-         MAX(s.unsub_one_click), MAX(u.status) \
+         MAX(s.unsub_one_click), MAX(u.status), \
+         SUM(CASE WHEN {sender_pinned} THEN s.message_count ELSE 0 END), {pin} AS pin \
          FROM ({source}) s \
          LEFT JOIN unsubscribes u ON u.account_id = s.account_id AND u.from_addr = s.from_addr \
-         {extra_filter} GROUP BY {key} ORDER BY {sort} DESC, {key} LIMIT ? OFFSET ?"
+         {extra_filter} GROUP BY {key} ORDER BY {pinned_first}{sort} DESC, {key} LIMIT ? OFFSET ?"
     );
     params.extend([
         Value::Integer(i64::from(request.limit)),
@@ -581,8 +658,9 @@ mod tests {
     fn uids(store: &crate::Store, account: i64, query: &str) -> Vec<u32> {
         let query = Query::parse(query).unwrap();
         let mut found: Vec<u32> = store
-            .read(|conn| targets(conn, account, &query, NOW))
+            .read(|conn| resolve(conn, account, &query, NOW, true))
             .unwrap()
+            .targets
             .into_iter()
             .map(|t| t.uid)
             .collect();
@@ -632,7 +710,8 @@ mod tests {
             totals,
             Totals {
                 count: 5,
-                bytes: 15_000
+                bytes: 15_000,
+                pinned: 0
             }
         );
         let first = store
@@ -715,6 +794,104 @@ mod tests {
         assert_eq!(
             group_keys(&store, account, "", GroupBy::List, SortBy::Count),
             vec![("deals.shop.com".into(), 2), ("news.shop.com".into(), 1)]
+        );
+    }
+
+    #[test]
+    fn pins_protect_senders_and_domains() {
+        let (store, account) = seed();
+        store
+            .write(|tx| {
+                pins::add(tx, account, pins::PinKind::Sender, " Alice@Friends.org ")?;
+                pins::add(tx, account, pins::PinKind::Domain, "@shop.com")?;
+                pins::add(tx, account, pins::PinKind::Domain, "shop.com")
+            })
+            .unwrap();
+        assert_eq!(store.read(|c| pins::list(c, account)).unwrap().len(), 2);
+        assert_eq!(uids(&store, account, "is:pinned"), vec![1, 2, 3, 4, 5]);
+        store
+            .write(|tx| pins::remove(tx, account, pins::PinKind::Domain, "shop.com"))
+            .unwrap();
+        store
+            .write(|tx| pins::add(tx, account, pins::PinKind::Domain, "mail.shop.com"))
+            .unwrap();
+        assert_eq!(uids(&store, account, "is:pinned"), vec![3, 4, 5]);
+        assert_eq!(uids(&store, account, "-is:pinned"), vec![1, 2]);
+
+        let query = Query::parse("").unwrap();
+        let guarded = store
+            .read(|c| resolve(c, account, &query, NOW, false))
+            .unwrap();
+        let uids_of = |targets: &[Target]| targets.iter().map(|t| t.uid).collect::<Vec<_>>();
+        assert_eq!(uids_of(&guarded.targets), vec![1, 2]);
+        assert_eq!(guarded.skipped.len(), 3);
+        let ids: Vec<i64> = store
+            .read(|c| messages(c, account, &query, NOW, None, 10))
+            .unwrap()
+            .into_iter()
+            .filter(|m| m.pinned)
+            .map(|m| m.id)
+            .collect();
+        assert_eq!(ids.len(), 3);
+        let by_id = store
+            .read(|c| resolve_ids(c, account, &ids, false))
+            .unwrap();
+        assert!(by_id.targets.is_empty());
+        assert_eq!(by_id.skipped.len(), 3);
+        let forced = store.read(|c| resolve_ids(c, account, &ids, true)).unwrap();
+        assert_eq!(forced.targets.len(), 3);
+        assert_eq!(
+            store
+                .read(|c| totals(c, account, &query, NOW))
+                .unwrap()
+                .pinned,
+            3
+        );
+
+        let request = |group_by| GroupRequest {
+            account_id: account,
+            query: &query,
+            now: NOW,
+            group_by,
+            sort_by: SortBy::Count,
+            limit: 50,
+            offset: 0,
+        };
+        let senders = store
+            .read(|c| groups(c, &request(GroupBy::Sender)))
+            .unwrap();
+        let rows: Vec<_> = senders
+            .iter()
+            .map(|g| {
+                (
+                    g.key.as_str(),
+                    g.pin.as_ref().map(|p| p.kind),
+                    g.pinned_count,
+                )
+            })
+            .collect();
+        assert_eq!(
+            rows,
+            vec![
+                ("alice@friends.org", Some(pins::PinKind::Sender), 2),
+                ("news@mail.shop.com", Some(pins::PinKind::Domain), 1),
+                ("deals@shop.com", None, 0),
+            ]
+        );
+        let domains = store
+            .read(|c| groups(c, &request(GroupBy::Domain)))
+            .unwrap();
+        let rows: Vec<_> = domains
+            .iter()
+            .map(|g| (g.key.as_str(), g.pin.is_some(), g.pinned_count))
+            .collect();
+        assert_eq!(
+            rows,
+            vec![
+                ("mail.shop.com", true, 1),
+                ("friends.org", false, 2),
+                ("shop.com", false, 0),
+            ]
         );
     }
 }
