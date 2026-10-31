@@ -36,7 +36,9 @@
 
   $effect(() => {
     const fromRoute = router.params.get('q') ?? '';
-    if (fromRoute !== query) query = fromRoute;
+    untrack(() => {
+      if (fromRoute !== query) query = fromRoute;
+    });
   });
 
   $effect(() => {
