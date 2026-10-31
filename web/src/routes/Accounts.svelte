@@ -1,64 +1,39 @@
 <script lang="ts">
   import { api, errorMessage } from '../lib/api';
-  import Badge from '../lib/components/Badge.svelte';
+  import Avatar from '../lib/components/Avatar.svelte';
   import Button from '../lib/components/Button.svelte';
+  import Checkbox from '../lib/components/Checkbox.svelte';
   import ConfirmDialog from '../lib/components/ConfirmDialog.svelte';
+  import { providerName } from '../lib/components/ConnectDialog.svelte';
   import Field from '../lib/components/Field.svelte';
-  import GuideModal from '../lib/components/GuideModal.svelte';
   import Modal from '../lib/components/Modal.svelte';
+  import Pill, { type PillTone } from '../lib/components/Pill.svelte';
   import ProgressBar from '../lib/components/ProgressBar.svelte';
+  import TextInput from '../lib/components/TextInput.svelte';
   import { formatBytes, formatNumber, formatRelative } from '../lib/format';
-  import { guides, isAuthenticationFailure } from '../lib/guides';
+  import { isAuthenticationFailure } from '../lib/guides';
   import { router } from '../lib/router.svelte';
   import { session } from '../lib/session.svelte';
+  import { runningSync, syncStatus, type SyncStatus } from '../lib/sync';
   import { toasts } from '../lib/toasts.svelte';
   import type { Account, Mailbox } from '../lib/types';
+  import { ui } from '../lib/ui.svelte';
 
-  type Preset = { id: string; label: string; imap: string; smtp: string; smtpPort: number; appPassword: boolean };
+  const STATE_PILLS: Record<SyncStatus['state'], [PillTone, string]> = {
+    synced: ['good', 'Synced'],
+    syncing: ['strong', 'Syncing'],
+    error: ['bad', 'Error'],
+  };
 
-  const presets: Preset[] = [
-    { id: 'gmail', label: 'Gmail', imap: 'imap.gmail.com', smtp: 'smtp.gmail.com', smtpPort: 587, appPassword: true },
-    { id: 'outlook', label: 'Outlook / Microsoft 365', imap: 'outlook.office365.com', smtp: 'smtp.office365.com', smtpPort: 587, appPassword: false },
-    { id: 'icloud', label: 'iCloud', imap: 'imap.mail.me.com', smtp: 'smtp.mail.me.com', smtpPort: 587, appPassword: true },
-    { id: 'yahoo', label: 'Yahoo', imap: 'imap.mail.yahoo.com', smtp: 'smtp.mail.yahoo.com', smtpPort: 465, appPassword: true },
-    { id: 'fastmail', label: 'Fastmail', imap: 'imap.fastmail.com', smtp: 'smtp.fastmail.com', smtpPort: 465, appPassword: true },
-    { id: 'custom', label: 'Other IMAP server', imap: '', smtp: '', smtpPort: 587, appPassword: false },
-  ];
-
-  const blankForm = () => ({
-    preset: 'gmail',
-    label: '',
-    email: '',
-    username: '',
-    password: '',
-    imap_host: 'imap.gmail.com',
-    imap_port: 993,
-    security: 'tls',
-    smtp_host: 'smtp.gmail.com',
-    smtp_port: 587,
-  });
-
-  let adding = $state(false);
-  let form = $state(blankForm());
-  let saving = $state(false);
   let folderAccount = $state<Account | null>(null);
   let folders = $state<Mailbox[]>([]);
+  let foldersOpen = $state(false);
   let settingsAccount = $state<Account | null>(null);
   let settings = $state({ label: '', max_connections: 4, sync_interval_minutes: 15, smtp_host: '', smtp_port: 587, password: '' });
+  let settingsOpen = $state(false);
   let removing = $state<Account | null>(null);
   let confirmRemove = $state(false);
-  let foldersOpen = $state(false);
-  let settingsOpen = $state(false);
-  let guideOpen = $state(false);
-  let guideNotice = $state<string | null>(null);
-
-  const preset = $derived(presets.find((candidate) => candidate.id === form.preset));
-  const guide = $derived(guides[form.preset] ?? guides.custom!);
-
-  function openGuide(notice: string | null = null) {
-    guideNotice = notice;
-    guideOpen = true;
-  }
+  let technical = $state<Record<number, boolean>>({});
 
   $effect(() => {
     const added = router.params.get('added');
@@ -71,59 +46,22 @@
     }
   });
 
-  function applyPreset() {
-    const chosen = presets.find((candidate) => candidate.id === form.preset);
-    if (!chosen) return;
-    form.imap_host = chosen.imap;
-    form.smtp_host = chosen.smtp;
-    form.smtp_port = chosen.smtpPort;
-    form.imap_port = 993;
-    form.security = 'tls';
-  }
-
-  async function add(event: SubmitEvent) {
-    event.preventDefault();
-    saving = true;
-    try {
-      const account = await api.post<Account>('/accounts', {
-        label: form.label,
-        email: form.email,
-        username: form.username,
-        password: preset?.appPassword ? form.password.replace(/\s+/g, '') : form.password,
-        imap_host: form.imap_host,
-        imap_port: Number(form.imap_port),
-        security: form.security,
-        smtp_host: form.smtp_host,
-        smtp_port: Number(form.smtp_port),
-      });
-      adding = false;
-      form = blankForm();
-      await session.refreshAccounts();
-      session.selectAccount(account.id);
-      toasts.show(`Connected ${account.email}. The first sync has started.`, 'success');
-    } catch (error) {
-      const message = errorMessage(error);
-      if (isAuthenticationFailure(message)) {
-        openGuide(
-          preset?.appPassword
-            ? `${preset.label} rejected the email and password. This usually means the normal account password was used instead of an app password. Follow the steps below.`
-            : 'The server rejected the email and password. Check them and follow the steps below.',
-        );
-      } else {
-        toasts.show(message, 'error', 10000);
-      }
-    } finally {
-      saving = false;
+  function explain(account: Account, error: string): { title: string; body: string } {
+    const provider = providerName(account.imap_host);
+    const named = provider === 'IMAP' ? 'the' : `${provider}'s`;
+    if (isAuthenticationFailure(error)) {
+      return {
+        title: `${provider === 'IMAP' ? 'The server' : provider} rejected the password`,
+        body: 'The email and password were not accepted. Providers that need an app password reject the normal one. Open Settings to enter a new password, then try Sync now.',
+      };
     }
-  }
-
-  async function signIn(provider: 'google' | 'microsoft') {
-    try {
-      const { url } = await api.get<{ url: string }>(`/oauth/${provider}/start`);
-      window.location.href = url;
-    } catch (error) {
-      toasts.show(errorMessage(error), 'error');
+    if (/refused|unreachable|timed out|dns|resolve|connect/i.test(error)) {
+      return {
+        title: `Can't reach ${named} mail server`,
+        body: `The server refused the connection. Usually the server address or port is wrong, or ${provider === 'IMAP' ? 'the server' : provider} is briefly down. Check Settings, then try Sync now.`,
+      };
     }
+    return { title: 'The last sync failed', body: 'Something went wrong while syncing. Try Sync now, and check Settings if it keeps failing.' };
   }
 
   async function sync(account: Account) {
@@ -186,142 +124,99 @@
     removing = null;
     await session.refreshAccounts();
   }
-
-  function runningSync(account: Account) {
-    return session.activeJobs.find((job) => job.kind === 'sync' && job.account_id === account.id);
-  }
 </script>
 
-<section class="page">
-  <div class="page-header">
-    <h1>Accounts</h1>
-    <Button variant="primary" onclick={() => (adding = true)}>Add account</Button>
-  </div>
-
-  <div class="accounts">
-    {#each session.accounts as account (account.id)}
-      {@const job = runningSync(account)}
-      <article class="account card">
-        <div class="head">
-          <div>
-            <div class="title">
-              <strong>{account.label}</strong>
-              {#if account.provider === 'gmail'}<Badge tone="accent">Gmail</Badge>{/if}
-              {#if account.auth_kind === 'oauth2'}<Badge>OAuth</Badge>{/if}
-              {#if account.last_error}<Badge tone="danger" title={account.last_error}>sync error</Badge>{/if}
-            </div>
-            <span class="muted small">{account.email} · {account.imap_host}:{account.imap_port}</span>
-          </div>
-          <div class="toolbar">
-            <Button size="sm" busy={!!job} onclick={() => sync(account)}>Sync now</Button>
-            <Button size="sm" onclick={() => openFolders(account)}>Folders</Button>
-            <Button size="sm" onclick={() => openSettings(account)}>Settings</Button>
-            <Button size="sm" variant="danger" onclick={() => ((removing = account), (confirmRemove = true))}>Remove</Button>
-          </div>
-        </div>
-        <div class="stats">
-          <span><strong>{formatNumber(account.message_count)}</strong> messages indexed</span>
-          <span>{formatBytes(account.total_size)}</span>
-          <span class="muted">Last sync {formatRelative(account.last_synced_at)}</span>
-        </div>
-        {#if job}
-          <ProgressBar done={job.done} total={job.total} indeterminate />
-          <span class="muted small">Syncing {formatNumber(job.done)}{job.total ? ` of ${formatNumber(job.total)}` : ''} headers</span>
-        {/if}
-        {#if account.last_error}<p class="error small">{account.last_error}</p>{/if}
-      </article>
-    {:else}
-      <div class="card welcome">
-        <h2>Connect your first mailbox</h2>
-        <p class="muted">mail-sieve copies message headers into a local index so you can sort, filter and clean up thousands of messages in seconds. Message bodies stay on your mail server.</p>
-        <Button variant="primary" onclick={() => (adding = true)}>Add account</Button>
+<div class="grid grid-cols-[repeat(auto-fill,minmax(--spacing(160),1fr))] gap-8 pt-2">
+  {#each session.accounts as account (account.id)}
+    {@const status = syncStatus(account, runningSync(session.jobs, account.id))}
+    {@const [tone, label] = STATE_PILLS[status.state]}
+    <article class="flex flex-col gap-8 rounded-3xl border border-line p-10">
+      <div class="flex items-center gap-6">
+        <Avatar label={account.label} seed={account.id} size="2xl" />
+        <span class="flex min-w-0 flex-1 flex-col leading-row">
+          <span class="font-semibold">{account.label}</span>
+          <span class="truncate text-xs text-ink3">{account.email}</span>
+        </span>
+        <Pill {tone}>{label}</Pill>
       </div>
-    {/each}
-  </div>
-</section>
-
-<Modal bind:open={adding} title="Add account" width={600}>
-  {#if session.status?.oauth.google || session.status?.oauth.microsoft}
-    <div class="oauth">
-      {#if session.status?.oauth.google}<Button onclick={() => signIn('google')}>Sign in with Google</Button>{/if}
-      {#if session.status?.oauth.microsoft}<Button onclick={() => signIn('microsoft')}>Sign in with Microsoft</Button>{/if}
-    </div>
-    <p class="muted divider">or connect with a password</p>
-  {/if}
-  <button type="button" class="guide-banner" onclick={() => openGuide()}>
-    <span class="guide-icon" aria-hidden="true">?</span>
-    <span>
-      <strong>New here? See how to connect {preset?.label ?? 'your account'}</strong>
-      <span class="muted">Step-by-step, takes about two minutes.</span>
-    </span>
+      <div class="grid grid-cols-3 gap-4">
+        <div><div class="text-xs text-ink3">Indexed</div><div class="text-xl font-semibold tabular-nums">{formatNumber(account.message_count)}</div></div>
+        <div><div class="text-xs text-ink3">Size</div><div class="text-xl font-semibold">{formatBytes(account.total_size)}</div></div>
+        <div><div class="text-xs text-ink3">Last sync</div><div class="mt-2 text-base font-semibold">{status.state === 'syncing' ? 'Syncing' : formatRelative(account.last_synced_at)}</div></div>
+      </div>
+      <div class="text-xs text-ink3">{account.provider === 'gmail' ? 'Gmail' : providerName(account.imap_host)} · {account.imap_host}:{account.imap_port}</div>
+      {#if status.state === 'syncing'}
+        <div class="flex flex-col gap-4">
+          <div class="flex text-sm"><span class="flex-1 font-semibold">{status.first ? 'First sync' : 'Syncing'}</span><span class="text-ink2">{status.pct}%</span></div>
+          <ProgressBar value={status.pct} tone="sieve" />
+          {#if status.first}<div class="text-pretty text-xs text-ink2">Counts keep rising until every header is copied. That is expected; senders are already browsable.</div>{/if}
+        </div>
+      {/if}
+      {#if account.last_error && status.state !== 'syncing'}
+        {@const explained = explain(account, account.last_error)}
+        <div class="flex flex-col gap-4 rounded-xl bg-bad-bg p-7">
+          <div class="font-semibold text-bad">{explained.title}</div>
+          <div class="text-pretty text-sm text-ink">{explained.body}</div>
+          <button
+            type="button"
+            class="self-start border-0 bg-transparent p-0 text-xs font-semibold text-ink2 underline"
+            onclick={() => (technical[account.id] = !technical[account.id])}>{technical[account.id] ? 'Hide technical details' : 'Show technical details'}</button>
+          {#if technical[account.id]}<code class="font-mono text-xs break-words text-ink2">{account.last_error}</code>{/if}
+        </div>
+      {/if}
+      <div class="flex flex-wrap gap-4">
+        <Button variant="primary" busy={status.state === 'syncing'} onclick={() => sync(account)}>Sync now</Button>
+        <Button onclick={() => openFolders(account)}>Folders</Button>
+        <Button onclick={() => openSettings(account)}>Settings</Button>
+        <Button variant="muted-text" onclick={() => ((removing = account), (confirmRemove = true))}>Remove</Button>
+      </div>
+    </article>
+  {/each}
+  <button
+    type="button"
+    class="flex min-h-110 flex-col items-center justify-center gap-3 rounded-3xl border-check border-dashed border-line bg-transparent text-ink2"
+    onclick={() => (ui.connectOpen = true)}>
+    <span class="text-3xl font-light">+</span>
+    <span class="font-semibold text-ink">Connect a mailbox</span>
+    <span class="text-sm">Gmail, Outlook, iCloud, Yahoo, Fastmail or any IMAP server</span>
   </button>
-  <form id="add-account" class="grid" onsubmit={add}>
-    <Field label="Provider">
-      <select bind:value={form.preset} onchange={applyPreset}>
-        {#each presets as option (option.id)}<option value={option.id}>{option.label}</option>{/each}
-      </select>
-    </Field>
-    <Field label="Label" hint="Optional display name"><input type="text" bind:value={form.label} /></Field>
-    <Field label="Email address"><input type="email" required bind:value={form.email} autocomplete="email" /></Field>
-    <Field label="Username" hint="Defaults to the email address"><input type="text" bind:value={form.username} autocomplete="username" /></Field>
-    <div class="wide">
-      <Field label={preset?.appPassword ? 'App password' : 'Password'} hint={preset?.appPassword ? 'Not your normal password. Use the app password from the guide above.' : undefined}>
-        <input type="password" required bind:value={form.password} autocomplete="current-password" />
-      </Field>
-    </div>
-    <Field label="IMAP server"><input type="text" required bind:value={form.imap_host} /></Field>
-    <div class="pair">
-      <Field label="Port"><input type="number" bind:value={form.imap_port} /></Field>
-      <Field label="Security">
-        <select bind:value={form.security}>
-          <option value="tls">TLS</option>
-          <option value="plain">None (local only)</option>
-        </select>
-      </Field>
-    </div>
-    <Field label="SMTP server" hint="Used only for mailto unsubscribes"><input type="text" bind:value={form.smtp_host} /></Field>
-    <Field label="SMTP port"><input type="number" bind:value={form.smtp_port} /></Field>
-  </form>
-  {#snippet footer()}
-    <Button variant="ghost" onclick={() => (adding = false)}>Cancel</Button>
-    <Button variant="primary" type="submit" form="add-account" busy={saving}>Connect</Button>
-  {/snippet}
-</Modal>
+</div>
 
-<GuideModal bind:open={guideOpen} {guide} notice={guideNotice} />
-
-<Modal bind:open={foldersOpen} title="Folders for {folderAccount?.label ?? ''}" width={560}>
-  <p class="muted">Only synced folders are indexed. Gmail accounts sync All Mail, which already contains every label, so other Gmail folders are off by default to avoid counting messages twice.</p>
-  <ul class="folders">
+<Modal bind:open={foldersOpen} title="Folders for {folderAccount?.label ?? ''}">
+  <p class="m-0 leading-normal text-ink2">Only synced folders are indexed. Gmail accounts sync All Mail, which already contains every label, so other Gmail folders are off by default to avoid counting messages twice.</p>
+  <ul class="m-0 flex max-h-[55vh] list-none flex-col overflow-auto p-0">
     {#each folders as folder (folder.id)}
-      <li>
-        <label>
-          <input type="checkbox" checked={folder.sync_enabled} onchange={() => toggleFolder(folder)} />
-          <span class="truncate">{folder.display_name}</span>
-          {#if folder.special_use}<Badge>{folder.special_use.replace('\\', '')}</Badge>{/if}
-        </label>
-        <span class="muted small">{folder.sync_enabled ? `${formatNumber(folder.message_count)} indexed` : 'not synced'}</span>
+      <li class="flex min-h-26 items-center gap-6 border-b border-line">
+        <Checkbox label="Sync {folder.display_name}" checked={folder.sync_enabled} onchange={() => toggleFolder(folder)} />
+        <span class="min-w-0 flex-1 truncate font-semibold">{folder.display_name}</span>
+        {#if folder.special_use}<Pill size="tag">{folder.special_use.replace('\\', '')}</Pill>{/if}
+        <span class="text-xs text-ink3">{folder.sync_enabled ? `${formatNumber(folder.message_count)} indexed` : 'not synced'}</span>
       </li>
     {/each}
   </ul>
+  {#snippet footer()}
+    <Button size="dialog" variant="primary" onclick={() => (foldersOpen = false)}>Done</Button>
+  {/snippet}
 </Modal>
 
 <Modal bind:open={settingsOpen} title="Settings for {settingsAccount?.label ?? ''}">
-  <Field label="Label"><input type="text" bind:value={settings.label} /></Field>
+  <Field label="Label"><TextInput bind:value={settings.label} /></Field>
   <Field label="Parallel connections" hint="More connections sync faster. Gmail allows up to 15 per account.">
-    <input type="number" min="1" max="15" bind:value={settings.max_connections} />
+    <TextInput type="number" min="1" max="15" bind:value={settings.max_connections} />
   </Field>
   <Field label="Sync every (minutes)" hint="IDLE push also triggers a sync when new mail arrives.">
-    <input type="number" min="1" bind:value={settings.sync_interval_minutes} />
+    <TextInput type="number" min="1" bind:value={settings.sync_interval_minutes} />
   </Field>
-  <Field label="SMTP server"><input type="text" bind:value={settings.smtp_host} /></Field>
-  <Field label="SMTP port"><input type="number" bind:value={settings.smtp_port} /></Field>
+  <div class="grid grid-cols-[1fr_--spacing(48)] gap-6">
+    <Field label="SMTP server"><TextInput bind:value={settings.smtp_host} /></Field>
+    <Field label="Port"><TextInput type="number" bind:value={settings.smtp_port} /></Field>
+  </div>
   {#if settingsAccount?.auth_kind === 'password'}
-    <Field label="New password" hint="Leave empty to keep the current one"><input type="password" bind:value={settings.password} autocomplete="new-password" /></Field>
+    <Field label="New password" hint="Leave empty to keep the current one"><TextInput type="password" autocomplete="new-password" bind:value={settings.password} /></Field>
   {/if}
   {#snippet footer()}
-    <Button variant="ghost" onclick={() => (settingsOpen = false)}>Cancel</Button>
-    <Button variant="primary" onclick={saveSettings}>Save</Button>
+    <Button size="dialog" onclick={() => (settingsOpen = false)}>Cancel</Button>
+    <Button size="dialog" variant="primary" onclick={saveSettings}>Save</Button>
   {/snippet}
 </Modal>
 
@@ -332,128 +227,3 @@
   confirmLabel="Remove account"
   danger
   onconfirm={remove} />
-
-<style>
-  .accounts {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    overflow: auto;
-  }
-  .account {
-    padding: var(--space-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-  .head {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-  }
-  .title {
-    display: flex;
-    gap: var(--space-2);
-    align-items: center;
-  }
-  .stats {
-    display: flex;
-    gap: var(--space-5);
-    flex-wrap: wrap;
-  }
-  .small {
-    font-size: var(--text-xs);
-  }
-  .error {
-    color: var(--color-danger);
-    margin: 0;
-  }
-  .welcome {
-    padding: var(--space-6);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    align-items: flex-start;
-    max-width: 620px;
-  }
-  .welcome h2,
-  .welcome p {
-    margin: 0;
-  }
-  .guide-banner {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    width: 100%;
-    padding: var(--space-3);
-    border: 1px solid var(--color-accent);
-    border-radius: var(--radius-sm);
-    background: var(--color-accent-soft);
-    text-align: left;
-    cursor: pointer;
-  }
-  .guide-banner > span:last-child {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .guide-icon {
-    flex-shrink: 0;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: var(--color-accent);
-    color: var(--color-accent-text);
-    font-weight: 700;
-  }
-  .oauth {
-    display: flex;
-    gap: var(--space-2);
-  }
-  .divider {
-    margin: 0;
-    font-size: var(--text-sm);
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-3);
-  }
-  .wide {
-    grid-column: 1 / -1;
-  }
-  .pair {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-2);
-  }
-  .folders {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    max-height: 55vh;
-    overflow: auto;
-  }
-  .folders li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-3);
-  }
-  .folders label {
-    display: flex;
-    gap: var(--space-2);
-    align-items: center;
-    min-width: 0;
-  }
-  p {
-    margin: 0;
-    line-height: 1.5;
-  }
-</style>
