@@ -2,6 +2,7 @@ pub mod accounts;
 mod error;
 pub mod mailboxes;
 pub mod messages;
+pub mod search;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
