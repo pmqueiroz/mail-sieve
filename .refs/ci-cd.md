@@ -17,6 +17,38 @@ because it uses let chains and `as_chunks`. Node is 24.
   `npm run check` (`astro check`), `npm run build`. Independent of the
   other jobs. See [website.md](./website.md).
 
+## Image publishing
+
+`.github/workflows/image.yml` publishes `ghcr.io/pmqueiroz/mail-sieve`.
+
+- **Triggers**: every push to `main` publishes `edge` and `sha-<short>`;
+  a `v*` tag publishes `X.Y.Z`, `X.Y`, `X` (skipped while the major is 0,
+  since 0.x minors may break) and `latest`. `latest` therefore always means
+  the newest release, never `main`. Manual dispatch rebuilds the current
+  ref.
+- **Multi-arch on native runners**: `linux/amd64` builds on `ubuntu-24.04`
+  and `linux/arm64` on `ubuntu-24.04-arm` (free for public repos). QEMU
+  emulation was rejected: the release profile is fat LTO with one codegen
+  unit, which takes tens of minutes emulated. Each runner pushes its image
+  by digest only; the `merge` job stitches the digests into one tagged
+  manifest list with `docker buildx imagetools create`. The Dockerfile
+  needs no cross-compilation because every base image is multi-arch.
+- **Cache**: GitHub Actions cache, one scope per platform so the two
+  builds do not evict each other.
+- **Provenance**: `actions/attest-build-provenance` signs a SLSA build
+  provenance attestation for the manifest digest and pushes it to the
+  registry. Verify with `gh attestation verify
+  oci://ghcr.io/pmqueiroz/mail-sieve:latest --owner pmqueiroz`.
+- **Labels**: `docker/metadata-action` sets the OCI labels (source,
+  revision, license from the repo), which also links the package to the
+  repository on GitHub.
+- **Release**: on a tag, after the image is published, a GitHub release is
+  created with generated notes. Cut a release by pushing an annotated tag
+  that matches the workspace version: `git tag -a v0.1.0 -m v0.1.0 && git
+  push origin v0.1.0`.
+- The CI `docker` job still builds the image (amd64, not pushed) on every
+  PR, so a broken Dockerfile is caught before it reaches `main`.
+
 ## Website deploy
 
 `.github/workflows/pages.yml` builds `site/` and deploys it to GitHub Pages
@@ -52,11 +84,9 @@ docker build -t mail-sieve .
 
 ## Not set up yet
 
-
-- Publishing images (GHCR) and release binaries. Deliberately deferred
-  until the first tagged release (the license is MIT, see `LICENSE`);
-  publishing earlier would ship an artifact with no versioning promise.
-- Multi-arch images (arm64 for NAS boxes). The Dockerfile is portable; it
-  needs `docker/setup-qemu-action` and `platforms` once publishing exists.
+- Automated versioning (release-please or similar). Tags and the
+  workspace version are bumped by hand for now.
+- Release binaries outside the image.
+- A Docker Hub mirror. GHCR only for now.
 - Real-provider tests (Gmail, Outlook) need secrets and accounts and are
   not automated.
