@@ -67,7 +67,9 @@ One concept, one component (`web/src/lib/components`):
 - `PasswordField` (label, 48px bordered field with a Show/Hide reveal
   toggle, inline error or hint; the border turns `bad` on error).
 - `Chip` (toggle pill: filter chips, mobile nav, rule choices),
-  `Segmented`, `Checkbox`, `Pill` (status, tag and badge sizes), `Avatar`
+  `Segmented` (one absolutely positioned thumb measured from the active
+  button slides between options; the transition is enabled a frame after
+  first measure so it does not slide in on mount), `Checkbox`, `Pill` (status, tag and badge sizes), `Avatar`
   (tint from `tint.ts`, an `oklch` hue derived from a stable hash of the
   key), `ProgressBar`, `Icon` (the design's SVG set).
 - `Modal` (native `<dialog>`, backdrop click and Esc close), `Popover`
