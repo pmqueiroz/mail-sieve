@@ -1,7 +1,9 @@
 pub mod accounts;
 mod error;
+pub mod jobs;
 pub mod mailboxes;
 pub mod messages;
+pub mod rules;
 pub mod search;
 
 use std::path::{Path, PathBuf};
