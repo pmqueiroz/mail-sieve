@@ -33,8 +33,15 @@ impl Vault {
     }
 
     pub fn seal(&self, credentials: &StoredCredentials) -> Result<Vec<u8>> {
-        let plaintext =
-            serde_json::to_vec(credentials).map_err(|e| Error::Internal(e.to_string()))?;
+        self.seal_value(credentials)
+    }
+
+    pub fn open(&self, sealed: &[u8]) -> Result<StoredCredentials> {
+        self.open_value(sealed)
+    }
+
+    pub fn seal_value<T: Serialize>(&self, value: &T) -> Result<Vec<u8>> {
+        let plaintext = serde_json::to_vec(value).map_err(|e| Error::Internal(e.to_string()))?;
         let mut nonce_bytes = [0u8; NONCE_LEN];
         getrandom::fill(&mut nonce_bytes).map_err(|e| Error::Internal(e.to_string()))?;
         let nonce = XNonce::from(nonce_bytes);
@@ -47,7 +54,7 @@ impl Vault {
         Ok(sealed)
     }
 
-    pub fn open(&self, sealed: &[u8]) -> Result<StoredCredentials> {
+    pub fn open_value<T: serde::de::DeserializeOwned>(&self, sealed: &[u8]) -> Result<T> {
         if sealed.len() <= NONCE_LEN {
             return Err(Error::Internal("stored credentials are corrupt".into()));
         }

@@ -1,5 +1,6 @@
 mod accounts;
 mod actions;
+mod ai;
 mod api;
 mod assets;
 mod auth;
@@ -10,6 +11,7 @@ mod error;
 mod idle;
 mod jobs;
 mod oauth;
+mod plugins;
 mod rules;
 mod rules_file;
 mod scheduler;

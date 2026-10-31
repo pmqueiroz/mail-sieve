@@ -39,6 +39,10 @@ impl Config {
         self.data_dir.join("mail-sieve.db")
     }
 
+    pub fn plugins_dir(&self) -> PathBuf {
+        self.data_dir.join("plugins")
+    }
+
     pub fn secure_cookies(&self) -> bool {
         self.public_url
             .as_deref()

@@ -4,6 +4,7 @@ mod jobs;
 mod mail;
 mod oauth;
 mod pins;
+mod plugins;
 mod rules;
 
 use axum::Router;
@@ -64,6 +65,14 @@ pub fn router(state: AppState) -> Router {
         .route("/accounts/{id}/rules/import", post(rules::import))
         .route("/oauth/{provider}/start", get(oauth::start))
         .route("/oauth/{provider}/callback", get(oauth::callback))
+        .route("/plugins", get(plugins::list))
+        .route("/plugins/{id}", put(plugins::set_state))
+        .route(
+            "/plugins/{id}/config",
+            get(plugins::get_config).put(plugins::put_config),
+        )
+        .route("/plugins/{id}/files/{*path}", get(plugins::file))
+        .route("/ai/models", post(plugins::ai_models))
         .route("/auth/password", post(auth::change_password))
         .layer(from_fn_with_state(state.clone(), require_session));
     let public = Router::new()

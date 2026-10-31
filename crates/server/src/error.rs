@@ -19,6 +19,8 @@ pub enum Error {
     Unauthorized,
     #[error("{0}")]
     Conflict(String),
+    #[error("{0}")]
+    Upstream(String),
     #[error("oauth: {0}")]
     OAuth(String),
     #[error("{0}")]
@@ -36,7 +38,9 @@ impl Error {
             | Error::BadRequest(_) => StatusCode::BAD_REQUEST,
             Error::Unauthorized => StatusCode::UNAUTHORIZED,
             Error::Conflict(_) => StatusCode::CONFLICT,
-            Error::Imap(_) | Error::Unsubscribe(_) | Error::OAuth(_) => StatusCode::BAD_GATEWAY,
+            Error::Imap(_) | Error::Unsubscribe(_) | Error::OAuth(_) | Error::Upstream(_) => {
+                StatusCode::BAD_GATEWAY
+            }
             Error::Store(_) | Error::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
