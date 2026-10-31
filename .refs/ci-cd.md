@@ -15,7 +15,20 @@ because it uses let chains and `as_chunks`. Node is 24.
   embeds the real UI.
 - **`site`**: the marketing and docs website in `site/`. `npm ci`,
   `npm run check` (`astro check`), `npm run build`. Independent of the
-  other jobs; nothing is deployed. See [website.md](./website.md).
+  other jobs. See [website.md](./website.md).
+
+## Website deploy
+
+`.github/workflows/pages.yml` builds `site/` and deploys it to GitHub Pages
+on every push to `main` that touches `site/**` (or the workflow itself),
+plus manual dispatch. It is separate from `ci.yml` because it needs the
+`pages: write` and `id-token: write` permissions and the `github-pages`
+environment; deploys never cancel each other mid-flight. The repo's Pages
+source is "GitHub Actions" and the custom domain
+`mailsieve.pmqueiroz.dev` is set in the repo's Pages settings (a custom
+Actions deploy ignores `CNAME` files; `site/public/CNAME` is kept as
+documentation and for hosts that read it). DNS: a `CNAME` record from
+`mailsieve` to `pmqueiroz.github.io`.
 - **`rust`**: needs `web`. Starts Dovecot (`dovecot/dovecot:2.3-latest`
   with `docker/dovecot/dovecot.conf`) on `127.0.0.1:3143`, then
   `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`. With
@@ -39,8 +52,6 @@ docker build -t mail-sieve .
 
 ## Not set up yet
 
-- Deploying the website. `site/dist` is plain static files; the hosting
-  target (GitHub Pages or other) is not decided, so no deploy job exists.
 
 - Publishing images (GHCR) and release binaries. Deliberately deferred
   until the first tagged release (the license is MIT, see `LICENSE`);
