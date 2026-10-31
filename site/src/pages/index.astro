@@ -41,7 +41,7 @@ const jsonLd = [
     <Hero />
 
     <section class="mx-auto max-w-page px-12 pt-48 pb-16">
-      <SectionIntro id="features" eyebrow="features">
+      <SectionIntro id="features">
         <Fragment slot="title">Built for the inbox <span class="whitespace-nowrap">with <UnreadCounter /></span> unread.</Fragment>
         Email clients make you work one message at a time. <span>mail<b class="text-ink">sieve</b></span> works one sender at a time, which is how the
         clutter arrived in the first place.
@@ -50,7 +50,7 @@ const jsonLd = [
 
     <section class="mx-auto flex max-w-page flex-col gap-10 px-12 py-16">
       <FeatureRow>
-        <FeatureCard tag="01 · senders" title="See who's filling your inbox">
+        <FeatureCard title="See who's filling your inbox">
           Every sender, domain and mailing list, ranked by message count, unread count and storage. Most people find a
           handful of senders account for a third of everything.
         </FeatureCard>
@@ -59,14 +59,14 @@ const jsonLd = [
 
       <FeatureRow>
         <Panel><SearchPanel /></Panel>
-        <FeatureCard tag="02 · search" title="Search the way you think about mail" link={{ href: href('/docs/search/'), label: 'Full search syntax' }}>
+        <FeatureCard title="Search the way you think about mail" link={{ href: href('/docs/search/'), label: 'Full search syntax' }}>
           Combine sender, age, size, read state and mailing-list filters. The match count updates as you type, so you
           know exactly what an action will touch before you take it.
         </FeatureCard>
       </FeatureRow>
 
       <FeatureRow>
-        <FeatureCard tag="03 · rules" title="Rules that keep it clean" link={{ href: href('/docs/rules/'), label: 'How rules work' }}>
+        <FeatureCard title="Rules that keep it clean" link={{ href: href('/docs/rules/'), label: 'How rules work' }}>
           Save any search as a rule and pick an action. Rules run after every sync or on a timer, and they can never
           delete permanently.
         </FeatureCard>
