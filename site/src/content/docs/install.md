@@ -9,24 +9,47 @@ order: 2
 ## Docker
 
 ```sh
-git clone https://github.com/pmqueiroz/mail-sieve
-cd mail-sieve
-docker build -t mail-sieve .
 docker run -d --name mail-sieve \
   -p 127.0.0.1:8080:8080 \
   -v mail-sieve-data:/data \
-  mail-sieve
+  ghcr.io/pmqueiroz/mail-sieve
 ```
 
 Open `http://localhost:8080`, choose an admin password, then add your first account.
 
+Images are published for `linux/amd64` and `linux/arm64`, so the same command works on a Raspberry Pi or an ARM NAS.
+
+| Tag | What it is |
+| --- | --- |
+| `latest` | The newest release |
+| `0.1.0`, `0.1` | A specific release, or the newest patch of a minor version |
+| `edge` | The current `main` branch. Newest features, least tested |
+
 ## Docker Compose
 
-```sh
-docker compose -f docker/compose.yml up -d
+Save this as `compose.yml`:
+
+```yaml
+services:
+  mail-sieve:
+    image: ghcr.io/pmqueiroz/mail-sieve:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - mail-sieve-data:/data
+
+volumes:
+  mail-sieve-data:
 ```
 
-Set `MAIL_SIEVE_PORT` to use a host port other than 8080, and `MAIL_SIEVE_HOST_IP=0.0.0.0` to reach it from other devices. Both can live in `docker/.env`.
+Then start it:
+
+```sh
+docker compose up -d
+```
+
+The repository also ships this file as `docker/compose.yml`, where `MAIL_SIEVE_PORT` picks a host port other than 8080 and `MAIL_SIEVE_HOST_IP=0.0.0.0` makes it reachable from other devices. Both can live in `docker/.env`.
 
 :::note
 The data volume holds `secret.key`, which encrypts your stored credentials. Back it up. Without it, saved accounts must be re-added.
@@ -35,8 +58,8 @@ The data volume holds `secret.key`, which encrypts your stored credentials. Back
 ## Updating
 
 ```sh
-git pull
-docker compose -f docker/compose.yml up -d --build
+docker compose pull
+docker compose up -d
 ```
 
 Database migrations run automatically on start. Back up the data volume before upgrading.

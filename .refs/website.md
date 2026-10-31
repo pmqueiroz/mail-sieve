@@ -138,15 +138,16 @@ Deviations from the mock:
 The designer's copy was placeholder. Claims were checked against the code
 and README and rewritten where they were wrong:
 
-- Install: no image is published (see [ci-cd.md](./ci-cd.md)), so the
-  hero command and install docs use `git clone` + `docker compose`, not the
-  mock's `ghcr.io/...` image. Swap `installCommand` in `lib/site.ts` once
-  an image exists.
+- Install: the hero command, the compose snippet and the install docs use
+  the published `ghcr.io/pmqueiroz/mail-sieve` image (see
+  [ci-cd.md](./ci-cd.md)), not the mock's `ghcr.io/mail-sieve/...` name.
+  `installCommand` and `composeFile` live in `lib/site.ts`.
 - Env vars are the real `MAIL_SIEVE_*` set, not the mock's `MS_*`.
 - Search syntax is the real DSL (`has:list`, not `list:*`).
-- Removed features that do not exist: rules as YAML export/import, pinned
-  senders, arm64 images, "undo for 30 days" (undo exists, from the toast or
-  Activity, once).
+- Removed features that do not exist yet: rules as YAML export/import
+  (issue #1) and pinned senders (issue #2). arm64 images now exist and the
+  install docs say so. Also removed "undo for 30 days" (undo exists,
+  from the toast or Activity, once).
 
 Support is GitHub Sponsors only, on the owner's personal account
 (`github.com/sponsors/pmqueiroz`); Patreon was dropped. Still placeholder:

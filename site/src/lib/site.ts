@@ -18,19 +18,16 @@ export const links = {
 };
 
 export const installCommand =
-  'git clone https://github.com/pmqueiroz/mail-sieve && cd mail-sieve && docker compose -f docker/compose.yml up -d';
+  'docker run -d -p 127.0.0.1:8080:8080 -v mail-sieve-data:/data ghcr.io/pmqueiroz/mail-sieve';
 
 export const composeFile = `services:
   mail-sieve:
-    build: ..
-    image: mail-sieve:latest
+    image: ghcr.io/pmqueiroz/mail-sieve:latest
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
       - mail-sieve-data:/data
-    environment:
-      MAIL_SIEVE_PUBLIC_URL: http://localhost:8080
 
 volumes:
   mail-sieve-data:`;
