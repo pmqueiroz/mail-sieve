@@ -110,6 +110,16 @@ pub fn list(conn: &Connection) -> Result<Vec<Rule>> {
     Ok(rows)
 }
 
+pub fn for_account(conn: &Connection, account_id: i64) -> Result<Vec<Rule>> {
+    let mut stmt = conn.prepare_cached(&format!(
+        "SELECT {COLUMNS} FROM rules WHERE account_id = ?1 ORDER BY id"
+    ))?;
+    let rows = stmt
+        .query_map([account_id], from_row)?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(rows)
+}
+
 pub fn due(conn: &Connection, at: i64) -> Result<Vec<Rule>> {
     let mut stmt = conn.prepare_cached(&format!(
         "SELECT {COLUMNS} FROM rules WHERE enabled = 1 AND interval_minutes IS NOT NULL \
