@@ -246,7 +246,7 @@ pub struct MessageRow {
     pub flagged: bool,
     pub list_id: Option<String>,
     pub has_unsubscribe: bool,
-    pub pinned: bool,
+    pub pin: Option<Pin>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -271,7 +271,7 @@ fn message_row(row: &Row<'_>) -> rusqlite::Result<MessageRow> {
         unread: flags & SEEN == 0,
         flagged: flags & FLAGGED != 0,
         has_unsubscribe: row.get(11)?,
-        pinned: row.get(12)?,
+        pin: pins::decode(row.get(12)?),
     })
 }
 
@@ -296,7 +296,7 @@ pub fn messages(
          m.list_id, m.flags, (m.unsub_http IS NOT NULL OR m.unsub_mailto IS NOT NULL), {} \
          FROM messages m JOIN mailboxes b ON b.id = m.mailbox_id \
          WHERE {} ORDER BY m.date DESC, m.id DESC LIMIT ?",
-        message_pinned_sql(),
+        pins::pin_sql("m.account_id", "m.from_addr", "m.from_domain"),
         compiled.where_sql()
     );
     let mut stmt = conn.prepare_cached(&sql)?;
@@ -829,7 +829,7 @@ mod tests {
             .read(|c| messages(c, account, &query, NOW, None, 10))
             .unwrap()
             .into_iter()
-            .filter(|m| m.pinned)
+            .filter(|m| m.pin.is_some())
             .map(|m| m.id)
             .collect();
         assert_eq!(ids.len(), 3);
