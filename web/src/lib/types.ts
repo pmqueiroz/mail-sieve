@@ -43,6 +43,13 @@ export interface Mailbox {
 export type GroupBy = 'sender' | 'domain' | 'list';
 export type SortBy = 'count' | 'size' | 'unread' | 'recent';
 
+export type PinKind = 'sender' | 'domain';
+
+export interface Pin {
+  kind: PinKind;
+  key: string;
+}
+
 export interface Group {
   key: string;
   name: string | null;
@@ -56,6 +63,8 @@ export interface Group {
   unsub_mailto: string | null;
   unsub_one_click: boolean;
   unsubscribe_status: string | null;
+  pinned_count: number;
+  pin: Pin | null;
 }
 
 export interface MessageRow {
@@ -72,6 +81,7 @@ export interface MessageRow {
   flagged: boolean;
   list_id: string | null;
   has_unsubscribe: boolean;
+  pin: Pin | null;
 }
 
 export interface MessagePage {
@@ -82,6 +92,12 @@ export interface MessagePage {
 export interface Totals {
   count: number;
   bytes: number;
+  pinned: number;
+}
+
+export interface ActionResponse {
+  job_id: number | null;
+  skipped_pinned: number;
 }
 
 export type Category = 'newsletters' | 'notifications' | 'promotions' | 'receipts' | 'social' | 'people';

@@ -8,6 +8,8 @@
   import Checkbox from '../lib/components/Checkbox.svelte';
   import Chip from '../lib/components/Chip.svelte';
   import Pill from '../lib/components/Pill.svelte';
+  import PinButton from '../lib/components/PinButton.svelte';
+  import PinnedConfirm from '../lib/components/PinnedConfirm.svelte';
   import QueryBar from '../lib/components/QueryBar.svelte';
   import Segmented from '../lib/components/Segmented.svelte';
   import UnsubscribeDialog from '../lib/components/UnsubscribeDialog.svelte';
@@ -31,6 +33,7 @@
     ['Newsletters', 'has:list'],
     ['Large', 'larger:5mb'],
     ['Can unsubscribe', 'has:unsubscribe'],
+    ['Pinned', 'is:pinned'],
   ];
   const SORTS: [SortBy, string][] = [
     ['count', 'Most messages'],
@@ -51,12 +54,16 @@
   let exhausted = $state(false);
   let selected = $state<Record<string, Group>>({});
   let unsubscribeOpen = $state(false);
+  let pending = $state<{ action: string; confirm: boolean } | null>(null);
+  let pinnedConfirmOpen = $state(false);
   let generation = 0;
 
   const selection = $derived(Object.values(selected));
   const selectedMessages = $derived(selection.reduce((sum, group) => sum + group.message_count, 0));
   const selectedBytes = $derived(selection.reduce((sum, group) => sum + group.total_size, 0));
   const who = $derived(selection.length === 1 ? (selection[0]!.name ?? selection[0]!.key) : `${formatNumber(selection.length)} ${GROUP_PLURALS[groupBy]}`);
+  const singlePinned = $derived(selection.length === 1 && selection[0]!.pinned_count > 0);
+  const skipped = $derived(singlePinned ? 0 : selection.reduce((sum, group) => sum + group.pinned_count, 0));
   const resetKey = $derived(`${accountId}|${groupBy}|${sortBy}|${filter}`);
 
   $effect(() => {
@@ -122,9 +129,34 @@
   }
 
   async function run(action: string, confirm: boolean) {
+    if (singlePinned) {
+      pending = { action, confirm };
+      pinnedConfirmOpen = true;
+      return;
+    }
+    await execute(action, confirm, false);
+  }
+
+  async function execute(action: string, confirm: boolean, includePinned: boolean) {
     const queries = selection.map((group) => combine(filter, groupQuery(groupBy, group.key)));
-    await runAction(accountId, { queries }, action, confirm, { count: selectedMessages, who });
+    await runAction(accountId, { queries }, action, confirm, { count: selectedMessages - skipped, who }, includePinned);
     selected = {};
+  }
+
+  async function runPending() {
+    if (!pending) return;
+    try {
+      await execute(pending.action, pending.confirm, true);
+    } catch (error) {
+      toasts.show(errorMessage(error), 'error');
+    } finally {
+      pending = null;
+    }
+  }
+
+  function pinChanged() {
+    selected = {};
+    load(true);
   }
 </script>
 
@@ -188,6 +220,9 @@
                 {#if groupBy === 'sender'}{group.key}{:else if groupBy === 'list'}list: {group.list_id ?? group.key}{:else}{formatNumber(group.sender_count)} {group.sender_count === 1 ? 'sender' : 'senders'}{/if}
               </span>
             </span>
+            {#if groupBy !== 'list'}
+              <PinButton {accountId} kind={groupBy} key={group.key} pin={group.pin} label={name} onchange={pinChanged} />
+            {/if}
           </div>
           <span class="text-right font-semibold tabular-nums">{formatNumber(group.message_count)}</span>
           <span class="hidden text-right text-ink2 tabular-nums wide:inline">{formatNumber(group.unread_count)}</span>
@@ -214,8 +249,11 @@
   count={selectedMessages}
   bytes={selectedBytes}
   {who}
+  {skipped}
   onrun={run}
   onunsubscribe={groupBy === 'sender' ? () => (unsubscribeOpen = true) : undefined}
   onclear={() => (selected = {})} />
 
 <UnsubscribeDialog bind:open={unsubscribeOpen} {accountId} senders={selection} {who} count={selectedMessages} ondone={() => ((selected = {}), load(true))} />
+
+<PinnedConfirm bind:open={pinnedConfirmOpen} {who} action={pending?.action ?? ''} count={selectedMessages} onconfirm={runPending} />

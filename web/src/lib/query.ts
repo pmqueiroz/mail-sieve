@@ -22,6 +22,7 @@ export const QUERY_HELP = [
   ['subject:invoice', 'Words in the subject'],
   ['list:news', 'From a mailing list'],
   ['is:unread', 'Unread only'],
+  ['is:pinned', 'Pinned senders only'],
   ['has:unsubscribe', 'Sender offers unsubscribe'],
   ['older_than:1y', 'Older than a year (d, m, y)'],
   ['newer_than:7d', 'From the last week'],

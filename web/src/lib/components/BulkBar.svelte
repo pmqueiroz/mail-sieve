@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, errorMessage } from '../api';
   import { formatBytes, formatNumber } from '../format';
+  import { skippedNote } from '../pins';
   import { session } from '../session.svelte';
   import { toasts } from '../toasts.svelte';
   import type { Mailbox } from '../types';
@@ -13,6 +14,7 @@
     count,
     bytes,
     who,
+    skipped = 0,
     onrun,
     onunsubscribe,
     onclear,
@@ -21,6 +23,7 @@
     count: number;
     bytes: number;
     who: string;
+    skipped?: number;
     onrun: (action: string, confirm: boolean) => Promise<void>;
     onunsubscribe?: () => void;
     onclear: () => void;
@@ -94,7 +97,7 @@
       <button type="button" class="rounded-md border-0 bg-transparent px-6 py-5 text-left text-sm font-semibold text-bad hover:bg-bad-bg" onclick={() => ((menu = false), (confirmDelete = true))}>Delete permanently…</button>
     </Popover>
     <div class="flex flex-wrap items-center gap-3 rounded-full bg-btn py-4 pr-4 pl-10 text-btn-ink shadow-pop">
-      <span class="mr-5 whitespace-nowrap text-sm"><b>{formatNumber(count)}</b> messages, {formatBytes(bytes)} <span class="opacity-60">from {who}</span></span>
+      <span class="mr-5 whitespace-nowrap text-sm"><b>{formatNumber(count)}</b> messages, {formatBytes(bytes)} <span class="opacity-60">from {who}</span>{#if skipped > 0}<span class="opacity-60">, {skippedNote(skipped)}</span>{/if}</span>
       <Button size="xl" variant="inverse" busy={busy === 'archive'} onclick={() => run('archive')}>Archive</Button>
       <Button size="xl" variant="on-dark" busy={busy === 'trash'} onclick={() => run('trash')}>Move to trash</Button>
       <Button size="xl" variant="on-dark" busy={busy === 'mark_read'} onclick={() => run('mark_read')}>Mark read</Button>

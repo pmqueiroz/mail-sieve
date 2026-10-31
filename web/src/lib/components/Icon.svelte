@@ -13,7 +13,9 @@
     | 'bars'
     | 'tile'
     | 'check'
-    | 'envelope';
+    | 'envelope'
+    | 'pin'
+    | 'pinned';
 </script>
 
 <script lang="ts">
@@ -48,4 +50,8 @@
   <svg class={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
 {:else if name === 'envelope'}
   <svg class={className} width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v.3l-9 5.7-9-5.7z" /><path d="M3 9.2l9 5.6 9-5.6v8.3a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z" /></svg>
+{:else if name === 'pin'}
+  <svg class={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6l-1 6 3.5 3.5v1.5h-11V13L10 9.5z" /><path d="M12 14.5V21" /></svg>
+{:else if name === 'pinned'}
+  <svg class={className} width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6l-1 6 3.5 3.5v1.5h-11V13L10 9.5z" /><path d="M12 14.5V21" fill="none" /></svg>
 {/if}
