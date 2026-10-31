@@ -1,4 +1,4 @@
-use mail_sieve_core::{Query, TermKind};
+use mail_sieve_core::{Query, TermKind, normalize_label};
 use rusqlite::types::Value;
 use rusqlite::{Connection, Row, params_from_iter};
 use serde::{Deserialize, Serialize};
@@ -85,8 +85,10 @@ fn compile(account_id: i64, query: &Query, now: i64) -> Compiled {
             }
             TermKind::Mailbox(name) => compiled.push(
                 negated,
-                "m.mailbox_id IN (SELECT id FROM mailboxes WHERE account_id = ? AND name = ? COLLATE NOCASE)".into(),
-                [Value::Integer(account_id), Value::Text(name.clone())],
+                "m.mailbox_id IN (SELECT id FROM mailboxes WHERE account_id = ? AND name = ? COLLATE NOCASE) \
+                 OR instr(char(31) || m.labels || char(31), char(31) || ? || char(31)) > 0"
+                    .into(),
+                [Value::Integer(account_id), Value::Text(name.clone()), Value::Text(normalize_label(name))],
             ),
             TermKind::Unread => compiled.push(negated, format!("(m.flags & {SEEN}) = 0"), []),
             TermKind::Flagged => compiled.push(negated, format!("(m.flags & {FLAGGED}) != 0"), []),
@@ -427,14 +429,17 @@ mod tests {
                             Flags::default(),
                             Some("deals.shop.com"),
                         ),
-                        message(
-                            2,
-                            "deals@shop.com",
-                            "Weekly deals",
-                            10,
-                            Flags::SEEN,
-                            Some("deals.shop.com"),
-                        ),
+                        MessageMeta {
+                            labels: vec!["Receipts".into()],
+                            ..message(
+                                2,
+                                "deals@shop.com",
+                                "Weekly deals",
+                                10,
+                                Flags::SEEN,
+                                Some("deals.shop.com"),
+                            )
+                        },
                         message(
                             3,
                             "news@mail.shop.com",
@@ -495,6 +500,7 @@ mod tests {
         assert_eq!(uids(&store, account, "newer_than:7d"), vec![3, 4]);
         assert_eq!(uids(&store, account, "in:archive"), vec![5]);
         assert_eq!(uids(&store, account, "-in:INBOX"), vec![5]);
+        assert_eq!(uids(&store, account, "in:receipts"), vec![2]);
         assert_eq!(uids(&store, account, "larger:3kb"), vec![4, 5]);
         assert_eq!(uids(&store, account, "subject:deal"), vec![2]);
         assert_eq!(uids(&store, account, "list:news"), vec![3]);

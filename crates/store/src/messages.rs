@@ -1,4 +1,4 @@
-use mail_sieve_core::{Flags, MessageMeta};
+use mail_sieve_core::{Flags, LABEL_SEPARATOR, MessageMeta, join_labels, normalize_label};
 use rusqlite::{Connection, params};
 
 use crate::Result;
@@ -11,10 +11,11 @@ pub fn upsert_batch(
 ) -> Result<usize> {
     let mut stmt = conn.prepare_cached(
         "INSERT INTO messages (account_id, mailbox_id, uid, message_id, from_addr, from_name, \
-         from_domain, subject, date, size, flags, list_id, unsub_http, unsub_mailto, unsub_one_click) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15) \
-         ON CONFLICT (mailbox_id, uid) DO UPDATE SET flags = excluded.flags \
-         WHERE flags != excluded.flags",
+         from_domain, subject, date, size, flags, list_id, unsub_http, unsub_mailto, unsub_one_click, \
+         labels) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16) \
+         ON CONFLICT (mailbox_id, uid) DO UPDATE SET flags = excluded.flags, labels = excluded.labels \
+         WHERE flags != excluded.flags OR labels IS NOT excluded.labels",
     )?;
     let mut written = 0;
     for message in messages {
@@ -42,18 +43,68 @@ pub fn upsert_batch(
             message.unsubscribe.http,
             message.unsubscribe.mailto,
             message.unsubscribe.one_click,
+            join_labels(&message.labels),
         ])?;
     }
     Ok(written)
 }
 
-pub fn update_flags(conn: &Connection, mailbox_id: i64, flags: &[(u32, Flags)]) -> Result<usize> {
-    let mut stmt = conn.prepare_cached(
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FlagUpdate {
+    pub uid: u32,
+    pub flags: Flags,
+    pub labels: Option<Vec<String>>,
+}
+
+pub fn update_flags(conn: &Connection, mailbox_id: i64, updates: &[FlagUpdate]) -> Result<usize> {
+    let mut flags_only = conn.prepare_cached(
         "UPDATE messages SET flags = ?3 WHERE mailbox_id = ?1 AND uid = ?2 AND flags != ?3",
     )?;
+    let mut with_labels = conn.prepare_cached(
+        "UPDATE messages SET flags = ?3, labels = ?4 WHERE mailbox_id = ?1 AND uid = ?2 \
+         AND (flags != ?3 OR labels IS NOT ?4)",
+    )?;
     let mut updated = 0;
-    for (uid, flags) in flags {
-        updated += stmt.execute(params![mailbox_id, uid, flags.bits()])?;
+    for update in updates {
+        updated += match &update.labels {
+            None => flags_only.execute(params![mailbox_id, update.uid, update.flags.bits()])?,
+            Some(labels) => with_labels.execute(params![
+                mailbox_id,
+                update.uid,
+                update.flags.bits(),
+                join_labels(labels)
+            ])?,
+        };
+    }
+    Ok(updated)
+}
+
+pub fn remove_label(
+    conn: &Connection,
+    mailbox_id: i64,
+    uids: &[u32],
+    label: &str,
+) -> Result<usize> {
+    let label = normalize_label(label);
+    let mut select =
+        conn.prepare_cached("SELECT labels FROM messages WHERE mailbox_id = ?1 AND uid = ?2")?;
+    let mut update =
+        conn.prepare_cached("UPDATE messages SET labels = ?3 WHERE mailbox_id = ?1 AND uid = ?2")?;
+    let mut updated = 0;
+    for uid in uids {
+        let current: Option<String> =
+            match select.query_row(params![mailbox_id, uid], |row| row.get(0)) {
+                Ok(labels) => labels,
+                Err(rusqlite::Error::QueryReturnedNoRows) => continue,
+                Err(error) => return Err(error.into()),
+            };
+        let Some(current) = current else { continue };
+        let remaining: Vec<String> = current
+            .split(LABEL_SEPARATOR)
+            .filter(|existing| *existing != label)
+            .map(str::to_string)
+            .collect();
+        updated += update.execute(params![mailbox_id, uid, join_labels(&remaining)])?;
     }
     Ok(updated)
 }
@@ -157,10 +208,12 @@ mod tests {
 
         store
             .write(|tx| {
-                assert_eq!(
-                    update_flags(tx, inbox, &[(1, Flags::SEEN), (2, Flags::SEEN)])?,
-                    1
-                );
+                let seen = |uid| FlagUpdate {
+                    uid,
+                    flags: Flags::SEEN,
+                    labels: None,
+                };
+                assert_eq!(update_flags(tx, inbox, &[seen(1), seen(2)])?, 1);
                 assert_eq!(delete_uids(tx, inbox, &[2])?, 1);
                 Ok(())
             })
@@ -213,6 +266,42 @@ mod tests {
                 Ok(())
             })
             .unwrap();
+    }
+
+    #[test]
+    fn tracks_and_removes_labels() {
+        let store = test_support::store();
+        let account = test_support::account(&store);
+        let all = test_support::mailbox(&store, account, "[Gmail]/All Mail");
+        let mut message = meta(1, "a@b.com", Flags::default(), 1);
+        message.labels = vec!["\\Inbox".into(), "Receipts".into()];
+        store
+            .write(|tx| upsert_batch(tx, account, all, &[message]))
+            .unwrap();
+        let labels = |store: &crate::Store| {
+            store
+                .read(|c| {
+                    Ok(c.query_row("SELECT labels FROM messages", [], |r| {
+                        r.get::<_, Option<String>>(0)
+                    })?)
+                })
+                .unwrap()
+        };
+        assert_eq!(labels(&store).as_deref(), Some("inbox\u{1f}receipts"));
+        store
+            .write(|tx| remove_label(tx, all, &[1, 99], "\\Inbox"))
+            .unwrap();
+        assert_eq!(labels(&store).as_deref(), Some("receipts"));
+        let update = FlagUpdate {
+            uid: 1,
+            flags: Flags::SEEN,
+            labels: Some(vec![]),
+        };
+        assert_eq!(
+            store.write(|tx| update_flags(tx, all, &[update])).unwrap(),
+            1
+        );
+        assert_eq!(labels(&store), None);
     }
 
     #[test]

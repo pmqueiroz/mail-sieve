@@ -56,6 +56,7 @@ CREATE TABLE messages (
     unsub_http TEXT,
     unsub_mailto TEXT,
     unsub_one_click INTEGER NOT NULL DEFAULT 0,
+    labels TEXT,
     UNIQUE (mailbox_id, uid)
 );
 
