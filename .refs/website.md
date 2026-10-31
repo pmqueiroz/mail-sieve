@@ -168,7 +168,11 @@ and README and rewritten where they were wrong:
   from the toast or Activity, once).
 
 Support is GitHub Sponsors only, on the owner's personal account
-(`github.com/sponsors/pmqueiroz`); Patreon was dropped. Still placeholder:
+(`github.com/sponsors/pmqueiroz`); Patreon was dropped. Every sponsor
+button (the header "Donate" pill and the support card's CTA) leads with
+the `heart` icon in `text-sponsor` (`#db61a2`, GitHub's sponsor pink). The
+`heart` glyph is GitHub's Octicon `heart-fill` (16px viewBox), so it
+matches the button GitHub shows on the sponsors page. Still placeholder:
 the "Free forever / no investors / donations pay for..." support copy and
 the illustrative numbers in the home page panels (sender counts, "1,246
 messages", "Last run 09:15").
