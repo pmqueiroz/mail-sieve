@@ -113,8 +113,6 @@ Deviations from the mock:
   (4.15:1 on the page, 3.8:1 on cards) for the small labels it is used on.
 - Header gap is 16px below `wide` (28px above): at 390px the mock's header
   overflows the viewport.
-- Footer says "Self-hosted IMAP cleanup" instead of "MIT licensed": the
-  repo has no LICENSE file yet.
 
 ## Copy: what is real and what is placeholder
 
