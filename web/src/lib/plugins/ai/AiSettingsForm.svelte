@@ -1,22 +1,36 @@
-<script lang="ts">
-  import { untrack } from 'svelte';
-  import { errorMessage } from '../../lib/api';
-  import BrandText from '../../lib/components/BrandText.svelte';
-  import Button from '../../lib/components/Button.svelte';
-  import Field from '../../lib/components/Field.svelte';
-  import PasswordField from '../../lib/components/PasswordField.svelte';
-  import Segmented from '../../lib/components/Segmented.svelte';
-  import TextInput from '../../lib/components/TextInput.svelte';
-  import { listModels, loadPluginConfig, savePluginConfig, type SecretChanges } from '../../lib/plugins/config';
-  import { toasts } from '../../lib/toasts.svelte';
-  import type { AiProviderKind } from '../../lib/types';
-  import { API_KEY, type AiMode, type DockerRuntime, OLLAMA_COMPOSE, PROVIDERS, RUNTIMES, type WingmanSettings, withDefaults } from './settings';
+<script lang="ts" generics="T extends AiSettings">
+  import { type Snippet, untrack } from 'svelte';
+  import { errorMessage } from '../../api';
+  import BrandText from '../../components/BrandText.svelte';
+  import Button from '../../components/Button.svelte';
+  import Field from '../../components/Field.svelte';
+  import PasswordField from '../../components/PasswordField.svelte';
+  import Segmented from '../../components/Segmented.svelte';
+  import TextInput from '../../components/TextInput.svelte';
+  import { toasts } from '../../toasts.svelte';
+  import type { AiProviderKind } from '../../types';
+  import { listModels, loadPluginConfig, savePluginConfig, type SecretChanges } from '../config';
+  import { API_KEY, type AiMode, type AiSettings, type DockerRuntime, MODE_LABELS, OLLAMA_COMPOSE, PROVIDERS, RUNTIMES } from './settings';
 
-  const PLUGIN_ID = 'wingman';
+  let {
+    pluginId,
+    name,
+    modes,
+    offText = '',
+    defaults,
+    extra,
+    close,
+  }: {
+    pluginId: string;
+    name: string;
+    modes: AiMode[];
+    offText?: string;
+    defaults: (stored: Partial<T> | null) => T;
+    extra?: Snippet<[T]>;
+    close: () => void;
+  } = $props();
 
-  let { close }: { close: () => void } = $props();
-
-  let settings = $state<WingmanSettings>(withDefaults(null));
+  let settings = $state<T>(untrack(() => defaults(null)));
   let loading = $state(true);
   let saving = $state(false);
   let keySaved = $state(false);
@@ -27,7 +41,7 @@
   let models = $state<string[]>([]);
   let testResult = $state<{ ok: boolean; message: string } | null>(null);
 
-  const modelList = `${PLUGIN_ID}-models`;
+  const modelList = $derived(`${pluginId}-models`);
   const provider = $derived(PROVIDERS[settings.cloud.provider]);
   const runtime = $derived(RUNTIMES[settings.docker.runtime]);
   const target = $derived(settings.mode === 'docker' ? settings.docker : settings.cloud);
@@ -45,9 +59,9 @@
 
   $effect(() => {
     untrack(() =>
-      loadPluginConfig<Partial<WingmanSettings>>(PLUGIN_ID)
+      loadPluginConfig<Partial<T>>(pluginId)
         .then((config) => {
-          settings = withDefaults(config.settings);
+          settings = defaults(config.settings);
           keySaved = config.secrets.includes(API_KEY);
           keyOwner = { provider: settings.cloud.provider, base_url: settings.cloud.base_url };
         })
@@ -86,7 +100,7 @@
         kind: cloud ? settings.cloud.provider : 'openai',
         baseUrl: target.base_url,
         apiKey: cloud ? apiKey : undefined,
-        plugin: cloud && savedKeyApplies ? PLUGIN_ID : undefined,
+        plugin: cloud && savedKeyApplies ? pluginId : undefined,
       });
       const found = models.includes(target.model.trim());
       const count = `${models.length} ${models.length === 1 ? 'model' : 'models'} available`;
@@ -106,8 +120,8 @@
     const keepSaved = savedKeyApplies && settings.mode === 'cloud';
     const secrets: SecretChanges = apiKey.trim() ? { [API_KEY]: apiKey.trim() } : keepSaved ? {} : { [API_KEY]: null };
     try {
-      await savePluginConfig(PLUGIN_ID, $state.snapshot(settings), secrets);
-      toasts.show('Wingman settings saved.', 'success');
+      await savePluginConfig(pluginId, $state.snapshot(settings), secrets);
+      toasts.show(`${name} settings saved.`, 'success');
       close();
     } catch (error) {
       toasts.show(errorMessage(error), 'error');
@@ -130,15 +144,11 @@
       <div class="flex"><Segmented
         label="Intelligence"
         bind:value={() => settings.mode, chooseMode}
-        options={[
-          { value: 'rules', label: 'Built-in rules' },
-          { value: 'cloud', label: 'AI provider' },
-          { value: 'docker', label: 'Local with Docker' },
-        ]} /></div>
+        options={modes.map((mode) => ({ value: mode, label: MODE_LABELS[mode] }))} /></div>
     </div>
 
     {#if settings.mode === 'rules'}
-      <p class="m-0 text-pretty leading-normal text-ink2"><BrandText text="The wingman uses mailsieve's own rules: senders you never open, lists you never read and failed syncs. Nothing leaves your server." /></p>
+      <p class="m-0 text-pretty leading-normal text-ink2"><BrandText text={offText} /></p>
     {:else}
       {#if settings.mode === 'cloud'}
         <p class="m-0 text-pretty leading-normal text-ink2">
@@ -206,6 +216,8 @@
         {/if}
       </div>
     {/if}
+
+    {@render extra?.(settings)}
 
     <div class="flex flex-wrap items-center justify-end gap-4">
       {#if missing}<span class="mr-auto text-sm text-ink3">{missing}</span>{/if}

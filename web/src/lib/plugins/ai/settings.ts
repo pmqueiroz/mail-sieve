@@ -1,9 +1,10 @@
-import type { AiProviderKind } from '../../lib/types';
+import type { AiProviderKind } from '../../types';
+import type { CompletionTarget } from '../config';
 
 export type AiMode = 'rules' | 'cloud' | 'docker';
 export type DockerRuntime = 'ollama' | 'model-runner';
 
-export interface WingmanSettings {
+export interface AiSettings {
   mode: AiMode;
   cloud: { provider: AiProviderKind; base_url: string; model: string };
   docker: { runtime: DockerRuntime; base_url: string; model: string };
@@ -42,16 +43,28 @@ export const OLLAMA_COMPOSE = `services:
 volumes:
   ollama:`;
 
-export const DEFAULT_SETTINGS: WingmanSettings = {
+export const MODE_LABELS: Record<AiMode, string> = {
+  rules: 'Built-in rules',
+  cloud: 'AI provider',
+  docker: 'Local with Docker',
+};
+
+export const DEFAULT_AI_SETTINGS: AiSettings = {
   mode: 'rules',
   cloud: { provider: 'anthropic', base_url: PROVIDERS.anthropic.baseUrl, model: PROVIDERS.anthropic.model },
   docker: { runtime: 'ollama', base_url: RUNTIMES.ollama.baseUrl, model: RUNTIMES.ollama.model },
 };
 
-export function withDefaults(stored: Partial<WingmanSettings> | null): WingmanSettings {
+export function withAiDefaults(stored: Partial<AiSettings> | null, mode: AiMode = DEFAULT_AI_SETTINGS.mode): AiSettings {
   return {
-    mode: stored?.mode ?? DEFAULT_SETTINGS.mode,
-    cloud: { ...DEFAULT_SETTINGS.cloud, ...stored?.cloud },
-    docker: { ...DEFAULT_SETTINGS.docker, ...stored?.docker },
+    mode: stored?.mode ?? mode,
+    cloud: { ...DEFAULT_AI_SETTINGS.cloud, ...stored?.cloud },
+    docker: { ...DEFAULT_AI_SETTINGS.docker, ...stored?.docker },
   };
+}
+
+export function aiTarget(settings: AiSettings, pluginId: string): CompletionTarget | null {
+  if (settings.mode === 'cloud') return { kind: settings.cloud.provider, baseUrl: settings.cloud.base_url, model: settings.cloud.model, plugin: pluginId };
+  if (settings.mode === 'docker') return { kind: 'openai', baseUrl: settings.docker.base_url, model: settings.docker.model };
+  return null;
 }
