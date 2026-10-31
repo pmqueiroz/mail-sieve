@@ -8,6 +8,7 @@ mod parallel;
 mod parse;
 
 pub use actions::{Operation, apply};
+pub use async_imap::extensions::idle::IdleResponse;
 pub use connection::{
     Capabilities, Connection, Credentials, ImapConfig, MailboxStatus, Security, Session, connect,
 };

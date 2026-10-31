@@ -27,6 +27,7 @@ pub async fn fetch_headers_parallel(
         .chunks_by_count(plan.chunk_size)
         .iter()
         .flat_map(|chunk| chunk.chunks_by_encoded_len(MAX_UID_SET_BYTES))
+        .rev()
         .collect();
     if chunks.is_empty() {
         return Ok(());
