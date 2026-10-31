@@ -49,6 +49,7 @@ enum Command {
     },
     Accounts,
     SetPassword,
+    Health,
 }
 
 #[tokio::main]
@@ -75,6 +76,9 @@ async fn open_state(config: Config) -> Result<AppState> {
 }
 
 async fn run(cli: Cli) -> Result<()> {
+    if let Some(Command::Health) = cli.command {
+        return health(&cli.config).await;
+    }
     let state = open_state(cli.config).await?;
     match cli.command.unwrap_or(Command::Serve) {
         Command::Serve => serve(state).await,
@@ -108,6 +112,7 @@ async fn run(cli: Cli) -> Result<()> {
             }
             Ok(())
         }
+        Command::Health => Ok(()),
         Command::SetPassword => {
             eprintln!("new admin password:");
             let mut password = String::new();
@@ -119,6 +124,36 @@ async fn run(cli: Cli) -> Result<()> {
             println!("admin password updated; existing sessions were signed out");
             Ok(())
         }
+    }
+}
+
+async fn health(config: &Config) -> Result<()> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let mut address = config.bind;
+    if address.ip().is_unspecified() {
+        address.set_ip(std::net::Ipv4Addr::LOCALHOST.into());
+    }
+    let unhealthy = |reason: String| Error::Internal(format!("unhealthy: {reason}"));
+    let mut stream = tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        tokio::net::TcpStream::connect(address),
+    )
+    .await
+    .map_err(|_| unhealthy("timeout".into()))?
+    .map_err(|e| unhealthy(e.to_string()))?;
+    stream
+        .write_all(b"GET /api/health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+        .await
+        .map_err(|e| unhealthy(e.to_string()))?;
+    let mut response = String::new();
+    stream
+        .read_to_string(&mut response)
+        .await
+        .map_err(|e| unhealthy(e.to_string()))?;
+    if response.starts_with("HTTP/1.1 200") {
+        Ok(())
+    } else {
+        Err(unhealthy(response.lines().next().unwrap_or("").into()))
     }
 }
 
