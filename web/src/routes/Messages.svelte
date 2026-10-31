@@ -6,14 +6,18 @@
   import BulkBar from '../lib/components/BulkBar.svelte';
   import Button from '../lib/components/Button.svelte';
   import Checkbox from '../lib/components/Checkbox.svelte';
+  import Icon from '../lib/components/Icon.svelte';
   import Pill from '../lib/components/Pill.svelte';
+  import PinButton from '../lib/components/PinButton.svelte';
+  import PinnedConfirm from '../lib/components/PinnedConfirm.svelte';
   import QueryBar from '../lib/components/QueryBar.svelte';
   import VirtualList from '../lib/components/VirtualList.svelte';
   import { formatBytes, formatNumber, formatShortDate } from '../lib/format';
+  import { pinDescription } from '../lib/pins';
   import { router } from '../lib/router.svelte';
   import { session } from '../lib/session.svelte';
   import { toasts } from '../lib/toasts.svelte';
-  import type { MessagePage, MessageRow, Preview, Totals } from '../lib/types';
+  import type { MessagePage, MessageRow, Pin, Preview, Totals } from '../lib/types';
 
   const PAGE = 300;
   const ROW_CONTENT_HEIGHT = 56;
@@ -33,6 +37,8 @@
   let active = $state<MessageRow | null>(null);
   let preview = $state<Preview | null>(null);
   let previewError = $state<string | null>(null);
+  let pendingOne = $state<string | null>(null);
+  let pinnedConfirmOpen = $state(false);
   let generation = 0;
 
   const gmail = $derived(session.current?.provider === 'gmail');
@@ -40,6 +46,7 @@
   const allLoaded = $derived(messages.length > 0 && selection.length === messages.length);
   const selectedCount = $derived(allMatching ? (totals?.count ?? 0) : selection.length);
   const selectedBytes = $derived(allMatching ? (totals?.bytes ?? 0) : selection.reduce((sum, m) => sum + m.size, 0));
+  const skipped = $derived(allMatching ? (totals?.pinned ?? 0) : selection.filter((message) => message.pin).length);
   const who = $derived.by(() => {
     if (allMatching) return 'this search';
     const senders = new Set(selection.map((message) => message.from_addr));
@@ -114,18 +121,35 @@
 
   async function run(action: string, confirm: boolean) {
     const target = allMatching ? { query } : { ids: selection.map((message) => message.id) };
-    await runAction(accountId, target, action, confirm || (allMatching && query === ''), { count: selectedCount, who });
+    await runAction(accountId, target, action, confirm || (allMatching && query === ''), { count: selectedCount - skipped, who });
     clear();
   }
 
-  async function runOne(action: string) {
+  function runOne(action: string) {
+    if (!active) return;
+    if (active.pin) {
+      pendingOne = action;
+      pinnedConfirmOpen = true;
+      return;
+    }
+    return executeOne(action, false);
+  }
+
+  async function executeOne(action: string, includePinned: boolean) {
     if (!active) return;
     try {
-      await runAction(accountId, { ids: [active.id] }, action, false, { count: 1, who: active.from_name ?? active.from_addr });
+      await runAction(accountId, { ids: [active.id] }, action, false, { count: 1, who: active.from_name ?? active.from_addr }, includePinned);
       active = null;
     } catch (error) {
       toasts.show(errorMessage(error), 'error');
     }
+  }
+
+  async function pinChanged(pin: Pin | null) {
+    if (active) active = { ...active, pin };
+    await load(true);
+    const current = active && messages.find((message) => message.id === active!.id);
+    if (current) active = current;
   }
 
   async function open(message: MessageRow) {
@@ -182,6 +206,7 @@
             <span class="flex min-w-0 flex-1 flex-col leading-row">
               <span class="flex items-center gap-4">
                 <span class="truncate {message.unread ? 'font-bold' : 'font-medium'}">{message.from_name ?? message.from_addr}</span>
+                {#if message.pin}<span class="shrink-0 text-ink3" title={pinDescription(message.pin)}><Icon name="pinned" size={12} /></span>{/if}
                 {#if message.flagged}<Pill tone="warn" size="tag">Flagged</Pill>{/if}
                 {#if tag}<Pill size="tag">{tag}</Pill>{/if}
               </span>
@@ -208,6 +233,7 @@
             <span class="truncate font-semibold">{active.from_name ?? active.from_addr}</span>
             <span class="truncate text-xs text-ink3">{active.from_addr}</span>
           </span>
+          <PinButton {accountId} kind="sender" key={active.from_addr} pin={active.pin} label={active.from_name ?? active.from_addr} onchange={pinChanged} />
           <button type="button" aria-label="Close preview" class="size-16 shrink-0 rounded-full border border-line bg-transparent" onclick={() => (active = null)}>✕</button>
         </div>
         <div class="mt-4 text-pretty text-lg font-semibold tracking-snug">{active.subject ?? '(no subject)'}</div>
@@ -233,4 +259,11 @@
   {/if}
 </div>
 
-<BulkBar {accountId} count={selectedCount} bytes={selectedBytes} {who} onrun={run} onclear={clear} />
+<BulkBar {accountId} count={selectedCount} bytes={selectedBytes} {who} {skipped} onrun={run} onclear={clear} />
+
+<PinnedConfirm
+  bind:open={pinnedConfirmOpen}
+  who={active?.from_name ?? active?.from_addr ?? ''}
+  action={pendingOne ?? ''}
+  count={1}
+  onconfirm={() => (pendingOne ? executeOne(pendingOne, true) : undefined)} />
