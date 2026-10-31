@@ -1,0 +1,70 @@
+---
+interface Props {
+  target?: number;
+  word?: string;
+}
+
+const { target = 40000, word = 'thousands' } = Astro.props;
+---
+
+<span class="inline-grid" data-unread-counter data-target={target} data-word={word}>
+  <span class="sr-only">{word}</span>
+  <span aria-hidden="true" class="invisible tabular-nums [grid-area:1/1]" data-counter-sizer>{word}</span>
+  <span aria-hidden="true" class="justify-self-end tabular-nums transition-opacity duration-300 [grid-area:1/1]" data-counter-value>{word}</span>
+</span>
+
+<script>
+  const COUNT_MS = 1600;
+  const TICK_MS = 280;
+  const TICKS = 7;
+  const FADE_MS = 300;
+
+  const format = (value: number) => value.toLocaleString('en-US');
+  const easeOut = (t: number) => 1 - (1 - t) ** 3;
+  const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+  async function play(root: HTMLElement, sizer: HTMLElement, value: HTMLElement) {
+    const target = Number(root.dataset.target);
+    const start = performance.now();
+    await new Promise<void>((resolve) => {
+      const frame = (now: number) => {
+        const progress = Math.min((now - start) / COUNT_MS, 1);
+        value.textContent = format(Math.round(target * easeOut(progress)));
+        if (progress < 1) requestAnimationFrame(frame);
+        else resolve();
+      };
+      requestAnimationFrame(frame);
+    });
+    let current = target;
+    for (let tick = 0; tick < TICKS; tick += 1) {
+      await wait(TICK_MS);
+      current += 1 + Math.floor(Math.random() * 4);
+      value.textContent = format(current);
+    }
+    await wait(TICK_MS * 2);
+    value.classList.add('opacity-0');
+    await wait(FADE_MS);
+    sizer.textContent = root.dataset.word ?? '';
+    value.textContent = root.dataset.word ?? '';
+    value.classList.remove('opacity-0');
+  }
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-unread-counter]')) {
+    const sizer = root.querySelector<HTMLElement>('[data-counter-sizer]');
+    const value = root.querySelector<HTMLElement>('[data-counter-value]');
+    if (reducedMotion || !sizer || !value) continue;
+    sizer.textContent = format(Number(root.dataset.target) + 99);
+    value.textContent = format(0);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        void play(root, sizer, value);
+      },
+      { threshold: 1 },
+    );
+    observer.observe(root);
+  }
+</script>

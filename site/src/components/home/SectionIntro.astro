@@ -3,7 +3,7 @@ import Eyebrow from '../Eyebrow.astro';
 
 interface Props {
   eyebrow: string;
-  title: string;
+  title?: string;
   align?: 'start' | 'center';
   size?: 'lg' | 'md';
   id?: string;
@@ -21,7 +21,7 @@ const { eyebrow, title, align = 'start', size = 'lg', id, class: className } = A
       size === 'lg' ? 'text-section' : 'text-section-sm',
     ]}
   >
-    {title}
+    <slot name="title">{title}</slot>
   </h2>
   <p class="m-0 max-w-intro text-lead text-pretty text-ink-2"><slot /></p>
 </div>

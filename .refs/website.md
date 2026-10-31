@@ -15,7 +15,8 @@ by default, so the output is plain files that any static host can serve.
   own URL (`/docs/<id>/`). `/docs/` is a meta-refresh redirect to
   `/docs/intro/` (marked `noindex`, canonical to the target).
 - **Only JS on the page** is the copy-to-clipboard handler in
-  `CopyButton.astro` (a few hundred bytes, inlined by Astro). Nav
+  `CopyButton.astro` and the unread counter in `UnreadCounter.astro` (both
+  small, inlined by Astro). Nav
   scrolling, responsive layout and the sticky header are CSS.
 - **CSS is inlined** (`build.inlineStylesheets: 'always'`), so there is no
   render-blocking stylesheet request. The home page is about 12 KB gzipped.
@@ -32,6 +33,23 @@ by default, so the output is plain files that any static host can serve.
 - Lighthouse (mobile, simulated throttling) at the time of writing: 100 on
   performance, accessibility, best practices and SEO for home and docs.
   Keep it there: no client frameworks, no third-party scripts or fonts.
+
+## The unread counter
+
+The features heading reads "Built for the inbox with thousands unread." in
+the HTML, which is what crawlers, no-JS visitors and reduced-motion users
+get. With JS, `UnreadCounter.astro` swaps the word for `0` on load (the
+section is below the fold), counts to 40,000 with an ease-out when the
+heading is fully visible, ticks up a few more like new mail arriving, then
+fades back to "thousands". It plays once per page view.
+
+- The value sits in an `inline-grid` cell with an invisible sizer holding
+  the widest string, both `tabular-nums`, so the heading does not reflow on
+  every frame. The sizer switches to the word only at the end.
+- "with" and the counter are wrapped in `whitespace-nowrap`, otherwise
+  `text-balance` moves "with" between lines when the width changes.
+- Screen readers get the static word from an `sr-only` copy; the animated
+  spans are `aria-hidden`.
 
 ## SEO
 

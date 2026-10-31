@@ -9,6 +9,7 @@ import SearchPanel from '../components/home/SearchPanel.astro';
 import SectionIntro from '../components/home/SectionIntro.astro';
 import SelfHosted from '../components/home/SelfHosted.astro';
 import SenderTable from '../components/home/SenderTable.astro';
+import UnreadCounter from '../components/home/UnreadCounter.astro';
 import Support from '../components/home/Support.astro';
 import Base from '../layouts/Base.astro';
 import { href } from '../lib/paths';
@@ -40,7 +41,8 @@ const jsonLd = [
     <Hero />
 
     <section class="mx-auto max-w-page px-12 pt-48 pb-16">
-      <SectionIntro id="features" eyebrow="features" title="Built for the inbox with 40,000 unread.">
+      <SectionIntro id="features" eyebrow="features">
+        <Fragment slot="title">Built for the inbox <span class="whitespace-nowrap">with <UnreadCounter /></span> unread.</Fragment>
         Email clients make you work one message at a time. mail-sieve works one sender at a time, which is how the
         clutter arrived in the first place.
       </SectionIntro>

@@ -126,6 +126,9 @@
   --container-intro: 600px;
 
   --blur-header: 14px;
+
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @utility bg-hero-glow {
