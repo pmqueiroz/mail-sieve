@@ -1,7 +1,7 @@
 # Design system
 
 The web UI implements the Claude Design handoff "Mail Sieve" (`Mail
-Sieve.dc.html`). Tailwind v4 is the only styling layer; every value comes
+Sieve.dc.html`) and its `Login.dc.html` for sign-in. Tailwind v4 is the only styling layer; every value comes
 from the `@theme` block in `web/src/app.css`.
 
 ## Tokens
@@ -17,14 +17,15 @@ from the `@theme` block in `web/src/app.css`.
   `track`, `overlay`). Dark values override the same variables under
   `prefers-color-scheme: dark`, so components never branch on theme.
 - **Type scale** is named by role, not size: `micro 10 · tiny 11 · xs 12 ·
-  sm 13 · base 14 · md 16 · lg 18 · xl 20 · 2xl 26 · 3xl 28 · hero-sm 72 ·
-  hero 104`. Default Tailwind scales (fonts, text, radius, shadows,
+  sm 13 · base 14 · md 16 · lg 18 · xl 20 · 2xl 26 · 3xl 28 · wordmark 36 ·
+  hero-sm 72 · hero 104`. Default Tailwind scales (fonts, text, radius, shadows,
   breakpoints, colors) are reset with `--*: initial` so only design values
   exist.
 - **Breakpoints** mirror the design's JS layout switches: `wide` 760px
   (rail and full table columns), `split` 1100px (message preview docks
   beside the list), `board` 1240px (Overview's two-column board).
-- **Utilities**: `bg-sieve` (the coral/amber/mint gradient), `bg-sieve-bloom`,
+- **Utilities**: `bg-page-glow` (Login's radial surface-to-page glow),
+  `bg-sieve` (the coral/amber/mint gradient), `bg-sieve-bloom`,
   `bg-ticks` (the striped never-opened track) and `border-check` (the
   1.5px checkbox/radio stroke).
 - **Fonts** are Plus Jakarta Sans and JetBrains Mono from `@fontsource`,
@@ -50,7 +51,10 @@ One concept, one component (`web/src/lib/components`):
 
 - `Button` (variants `primary outline ghost danger danger-text muted-text
   inverse on-dark on-dark-outline`; sizes are the design's heights:
-  `xs 28 · sm 30 · md 32 · lg 34 · xl 36 · 2xl 38 · dialog 40`).
+  `xs 28 · sm 30 · md 32 · lg 34 · xl 36 · 2xl 38 · dialog 40 · block 48`,
+  `block` is full width).
+- `PasswordField` (label, 48px bordered field with a Show/Hide reveal
+  toggle, inline error or hint; the border turns `bad` on error).
 - `Chip` (toggle pill: filter chips, mobile nav, rule choices),
   `Segmented`, `Checkbox`, `Pill` (status, tag and badge sizes), `Avatar`
   (tint from `tint.ts`, an `oklch` hue derived from a stable hash of the
@@ -68,6 +72,14 @@ One concept, one component (`web/src/lib/components`):
 - No outer frame: the mock presents the app as a rounded card inset 24px
   on a lavender canvas. That is design-file presentation, so the app fills
   the window and the rail is full height. `page` stays a token for Login.
+- Login is drawn dark-only in `Login.dc.html`. It is built from the theme
+  tokens, so dark mode matches the mock exactly and light mode gets the
+  same layout in light colors (`btn-hover` and `shadow-card` have light
+  values picked to match). The mock's fake "Incorrect password" timeout
+  is the real `/auth/login` 401. The same page also serves first-run
+  setup ("Welcome", a confirm field and the 10-character hint), which the
+  mock does not cover. The footer version comes from `package.json` via
+  Vite's `__APP_VERSION__` define.
 
 - Overview says "messages in your mailbox" and "% of your mail": the index
   covers every synced folder, not only the inbox.
