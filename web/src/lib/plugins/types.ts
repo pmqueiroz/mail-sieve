@@ -1,5 +1,6 @@
 import type { Component } from 'svelte';
 import type { Rule } from '../types';
+import type { PluginAvatarSpec, PluginColor, PluginIcon } from './avatar';
 import type { PluginHost } from './host.svelte';
 
 export interface SlotContexts {
@@ -36,6 +37,7 @@ export interface CorePlugin extends PluginDefinition {
   name: string;
   description: string;
   version: string;
+  avatar: { icon: PluginIcon; color: PluginColor };
   defaultEnabled: boolean;
 }
 
@@ -48,6 +50,7 @@ export interface PluginEntry {
   author: string;
   version: string;
   source: PluginSource;
+  avatar: PluginAvatarSpec | null;
   enabled: boolean;
   definition: PluginDefinition | null;
   entryUrl: string | null;

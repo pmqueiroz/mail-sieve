@@ -1,8 +1,8 @@
 # Design system
 
 The web UI implements the Claude Design handoff "Mail Sieve" (`Mail
-Sieve.dc.html`), its `Login.dc.html` for sign-in and `Wingman Ghoul.dc.html`
-for the wingman plugin. Tailwind v4 is the only styling layer; every value comes
+Sieve.dc.html`), its `Login.dc.html` for sign-in, `Wingman Ghoul.dc.html`
+for the wingman plugin and `Plugin Avatars.dc.html` for plugin avatars. Tailwind v4 is the only styling layer; every value comes
 from the `@theme` block in `web/src/app.css`.
 
 ## Tokens
@@ -25,6 +25,11 @@ from the `@theme` block in `web/src/app.css`.
 - **Breakpoints** mirror the design's JS layout switches: `wide` 760px
   (rail and full table columns), `split` 1100px (message preview docks
   beside the list), `board` 1240px (Overview's two-column board).
+- **Plugin avatar**: `plugin-solid` fills a plugin avatar from two inline
+  variables, `--plugin-hue` and `--plugin-chroma` (0 for gray): the
+  design's `solid` variant, a light OKLCH fill with dark ink, which reads
+  on both themes so it has no dark override. The handoff's `tinted`
+  (its default) and `outline` fills and `circle` shape are not used.
 - **Utilities**: `bg-page-glow` (Login's radial surface-to-page glow),
   `bg-sieve` (the coral/amber/mint gradient), `bg-sieve-bloom`,
   `bg-ticks` (the striped never-opened track) and `border-check` (the

@@ -318,6 +318,11 @@
   }
 }
 
+@utility plugin-solid {
+  background: oklch(0.78 calc(0.13 * var(--plugin-chroma)) var(--plugin-hue));
+  color: oklch(0.2 calc(0.05 * var(--plugin-chroma)) var(--plugin-hue));
+}
+
 @utility border-check {
   border-width: 1.5px;
   border-style: solid;

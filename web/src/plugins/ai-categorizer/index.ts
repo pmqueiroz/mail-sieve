@@ -8,6 +8,7 @@ export const aiCategorizer: CorePlugin = {
   name: 'AI categorizer',
   description: 'Splits the People category on Overview into your own groups, such as Work or Finance, using an AI model and only headers. Archive or mark a whole group read in one go.',
   version: '1.0.0',
+  avatar: { icon: 'sparkles', color: 'pink' },
   defaultEnabled: false,
   slots: { overview: Categorizer },
   configure: CategorizerSettings,

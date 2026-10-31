@@ -202,6 +202,7 @@ export interface CommunityPluginManifest {
   version: string;
   description: string;
   author: string;
+  avatar: { icon?: string | null; color?: string | null } | null;
   entry_url: string | null;
   error: string | null;
 }

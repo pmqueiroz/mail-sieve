@@ -6,6 +6,7 @@ export const undoHistory: CorePlugin = {
   name: 'Undo history',
   description: 'A button in the top bar that lists your recent actions and rule runs, so you can undo one long after its toast is gone.',
   version: '1.0.0',
+  avatar: { icon: 'undo', color: 'blue' },
   defaultEnabled: false,
   slots: { topbar: UndoHistory },
 };

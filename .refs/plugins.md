@@ -25,8 +25,8 @@ and every existing guard (pins, `confirm`, rule validation) still applies.
   so a community plugin sees the live query or account without being
   remounted.
 - `web/src/plugins/index.ts`: `CORE_PLUGINS`, the list of built-in plugins.
-  A core plugin adds `id`, `name`, `description`, `version` and
-  `defaultEnabled`. Every core plugin ships with `defaultEnabled: false`:
+  A core plugin adds `id`, `name`, `description`, `version`, `avatar`
+  and `defaultEnabled`. Every core plugin ships with `defaultEnabled: false`:
   plugins are opt-in, so a fresh install shows only the core app and the
   user turns on what they want on the Plugins page.
 - `registry.svelte.ts` (`plugins`): loads `GET /api/plugins` once after
@@ -45,7 +45,19 @@ and every existing guard (pins, `confirm`, rule validation) still applies.
   instructions when nothing is installed. A plugin with `configure` gets a
   Configure button (disabled while the plugin is off) that opens a `Modal`
   whose whole body is the plugin's content. The plugin owns its form,
-  including Save and Cancel, and calls `close` when done.
+  including Save and Cancel, and calls `close` when done. Each card opens
+  with the plugin's avatar and name; community cards add a
+  `by <author> · v<version>` line, core cards do not.
+- Avatars (`lib/plugins/avatar.ts`, `PluginAvatar.svelte`, from the
+  "Plugin Avatars" design handoff): one preset icon and one preset color,
+  never an uploaded image, so every plugin stays legible and on-palette.
+  `PLUGIN_ICONS` holds the 29 icon names (Lucide paths), `PLUGIN_COLORS`
+  the 9 color names and their hues (`gray` has no chroma). Core plugins
+  set `avatar: { icon, color }` in code; community plugins set it in
+  `plugin.json`. `resolveAvatar` falls back per field: an unknown or
+  missing icon shows the name's monogram (first letter of the first two
+  words), an unknown or missing color is picked from the non-gray colors
+  by a hash of the plugin id, so a plugin keeps its color across reloads.
 - Slots (`SlotContexts` in `types.ts`, the context each one passes):
   - `overlay`: once at the end of the signed-in shell, for floating UI.
     No context.
@@ -126,7 +138,9 @@ and every existing guard (pins, `confirm`, rule validation) still applies.
   `domain:`). Guard rejections and size errors are 400, fetch failures
   502.
 - Discovery reads `plugin.json` (`name` required; `version`,
-  `description`, `author`, `entry` default `index.js`) on every list call.
+  `description`, `author`, `avatar` `{ icon?, color? }`, `entry` default
+  `index.js`) on every list call. The server passes `avatar` through
+  without checking names; the web app owns the preset list.
   A folder with an unreadable manifest or missing entry is still listed
   with `error`, so the user sees why it does not load. Folders whose name
   is not a valid id (`[a-z0-9][a-z0-9-]{0,63}`) are skipped.

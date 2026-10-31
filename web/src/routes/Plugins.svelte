@@ -6,6 +6,7 @@
   import Checkbox from '../lib/components/Checkbox.svelte';
   import EmptyState from '../lib/components/EmptyState.svelte';
   import Modal from '../lib/components/Modal.svelte';
+  import PluginAvatar from '../lib/plugins/PluginAvatar.svelte';
   import PluginContent from '../lib/plugins/PluginContent.svelte';
   import { plugins } from '../lib/plugins/registry.svelte';
   import type { PluginEntry, PluginSource } from '../lib/plugins/types';
@@ -41,10 +42,14 @@
 </script>
 
 {#snippet card(entry: PluginEntry)}
-  <article class="flex flex-col gap-6 rounded-3xl border border-line p-10">
-    <div class="flex min-w-0 flex-col leading-row">
-      <span class="font-semibold">{entry.name}</span>
-      <span class="truncate text-xs text-ink3"><BrandText text={[entry.version && `v${entry.version}`, entry.author].filter(Boolean).join(' · ')} /></span>
+  {@const meta = [entry.author && `by ${entry.author}`, entry.version && `v${entry.version}`].filter(Boolean).join(' · ')}
+  <article class="flex flex-col gap-7 rounded-3xl border border-line p-10">
+    <div class="flex min-w-0 items-center gap-6">
+      <PluginAvatar avatar={entry.avatar} id={entry.id} name={entry.name} />
+      <div class="flex min-w-0 flex-col leading-row">
+        <span class="font-semibold">{entry.name}</span>
+        {#if entry.source === 'community' && meta}<span class="truncate text-xs text-ink3">{meta}</span>{/if}
+      </div>
     </div>
     {#if entry.description}<p class="m-0 text-pretty text-sm leading-normal text-ink2">{entry.description}</p>{/if}
     {#if entry.error}

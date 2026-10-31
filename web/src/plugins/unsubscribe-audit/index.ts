@@ -6,6 +6,7 @@ export const unsubscribeAudit: CorePlugin = {
   name: 'Unsubscribe audit',
   description: 'Watches senders you unsubscribed from. If one keeps mailing you, Activity lists it and offers a rule that trashes its mail after every sync.',
   version: '1.0.0',
+  avatar: { icon: 'bell-off', color: 'red' },
   defaultEnabled: false,
   slots: { activity: UnsubscribeAudit },
 };
