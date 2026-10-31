@@ -13,6 +13,9 @@ because it uses let chains and `as_chunks`. Node is 24.
 - **`web`**: `npm ci`, `npm run check` (svelte-check, warnings fail the
   build), `npm run build`. Uploads `web/dist` as an artifact so the Rust job
   embeds the real UI.
+- **`site`**: the marketing and docs website in `site/`. `npm ci`,
+  `npm run check` (`astro check`), `npm run build`. Independent of the
+  other jobs; nothing is deployed. See [website.md](./website.md).
 - **`rust`**: needs `web`. Starts Dovecot (`dovecot/dovecot:2.3-latest`
   with `docker/dovecot/dovecot.conf`) on `127.0.0.1:3143`, then
   `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`. With
@@ -30,10 +33,14 @@ because it uses let chains and `as_chunks`. Node is 24.
 docker compose -f docker/compose.test.yml up -d
 MAIL_SIEVE_TEST_IMAP=127.0.0.1:3143 cargo test --workspace
 (cd web && npm ci && npm run check && npm run build)
+(cd site && npm ci && npm run check && npm run build)
 docker build -t mail-sieve .
 ```
 
 ## Not set up yet
+
+- Deploying the website. `site/dist` is plain static files; the hosting
+  target (GitHub Pages or other) is not decided, so no deploy job exists.
 
 - Publishing images (GHCR) and release binaries. Deliberately deferred
   until the first tagged release and a decided license; publishing earlier

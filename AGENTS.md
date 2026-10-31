@@ -13,6 +13,9 @@ explain the *why* and the gotchas.
 - [design-system.md](./.refs/design-system.md) — Tailwind tokens (2px
   spacing unit), the content-box gotcha, shared components, deviations from
   the design handoff. **Read before touching the web UI.**
+- [website.md](./.refs/website.md) — the static marketing + docs site in
+  `site/`: Astro, Markdown docs with `:::note` callouts, SEO, performance
+  budget, placeholder copy. **Read before touching `site/`.**
 - [ci-cd.md](./.refs/ci-cd.md) — CI/CD pipeline: jobs, toolchain pin, what's
   not set up yet.
 - [security.md](./.refs/security.md) — credential vault, admin sessions,
