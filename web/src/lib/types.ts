@@ -134,6 +134,15 @@ export interface Rule {
   created_at: number;
 }
 
+export type RuleConflict = 'skip' | 'replace';
+
+export interface RuleImportReport {
+  added: string[];
+  existing: string[];
+  invalid: { name: string; error: string }[];
+  applied: boolean;
+}
+
 export interface Preview {
   subject: string | null;
   from: string[];

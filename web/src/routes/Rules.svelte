@@ -6,13 +6,14 @@
   import Field from '../lib/components/Field.svelte';
   import Modal from '../lib/components/Modal.svelte';
   import Pill from '../lib/components/Pill.svelte';
+  import Segmented from '../lib/components/Segmented.svelte';
   import TextInput from '../lib/components/TextInput.svelte';
   import { liveTotals } from '../lib/count.svelte';
   import { describeRule, describeSchedule } from '../lib/describe';
   import { actionSentence, formatNumber, formatWhen } from '../lib/format';
   import { session } from '../lib/session.svelte';
   import { toasts } from '../lib/toasts.svelte';
-  import type { Mailbox, Rule } from '../lib/types';
+  import type { Mailbox, Rule, RuleConflict, RuleImportReport } from '../lib/types';
 
   type Schedule = 'after_sync' | 'interval' | 'manual';
   type Draft = { id: number | null; name: string; query: string; action: string; enabled: boolean; schedule: Schedule; interval: number };
@@ -45,6 +46,12 @@
   let saving = $state(false);
   let deleting = $state<Rule | null>(null);
   let confirmOpen = $state(false);
+  let fileInput: HTMLInputElement | undefined = $state();
+  let importing = $state(false);
+  let importYaml = $state('');
+  let importPreview = $state<RuleImportReport | null>(null);
+  let onConflict = $state<RuleConflict>('skip');
+  let applyingImport = $state(false);
 
   const accountRules = $derived(rules.filter((rule) => rule.account_id === accountId));
   const live = liveTotals(
@@ -52,6 +59,9 @@
     () => draft.query,
   );
   const movingToFolder = $derived(draft.action.startsWith(MOVE_PREFIX));
+  const importCount = $derived(
+    importPreview ? importPreview.added.length + (onConflict === 'replace' ? importPreview.existing.length : 0) : 0,
+  );
 
   async function load() {
     try {
@@ -131,6 +141,44 @@
     await load();
   }
 
+  function exportRules() {
+    location.assign(`/api/accounts/${accountId}/rules/export`);
+  }
+
+  async function previewImport(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      importYaml = await file.text();
+      importPreview = await api.post<RuleImportReport>(`/accounts/${accountId}/rules/import`, { yaml: importYaml });
+      onConflict = 'skip';
+      importing = true;
+    } catch (error) {
+      toasts.show(errorMessage(error), 'error');
+    }
+  }
+
+  async function applyImport() {
+    applyingImport = true;
+    try {
+      const report = await api.post<RuleImportReport>(`/accounts/${accountId}/rules/import`, {
+        yaml: importYaml,
+        on_conflict: onConflict,
+        apply: true,
+      });
+      const count = report.added.length + (onConflict === 'replace' ? report.existing.length : 0);
+      toasts.show(`Imported ${formatNumber(count)} ${count === 1 ? 'rule' : 'rules'}.`, 'success');
+      importing = false;
+      await load();
+    } catch (error) {
+      toasts.show(errorMessage(error), 'error');
+    } finally {
+      applyingImport = false;
+    }
+  }
+
   function lastRun(rule: Rule): string {
     const job = session.jobs.find((candidate) => candidate.payload.origin === `rule:${rule.id}` && candidate.state === 'done');
     const when = formatWhen(rule.last_run_at);
@@ -140,7 +188,12 @@
 
 <div class="mt-2 mb-10 flex flex-wrap items-center gap-6">
   <span class="min-w-120 flex-1 text-ink2">Rules run a saved search and an action on their own. They never delete permanently.</span>
-  <Button size="2xl" variant="primary" onclick={() => edit()}>New rule</Button>
+  <div class="flex flex-wrap gap-4">
+    <Button size="2xl" disabled={accountRules.length === 0} onclick={exportRules}>Export</Button>
+    <Button size="2xl" onclick={() => fileInput?.click()}>Import</Button>
+    <Button size="2xl" variant="primary" onclick={() => edit()}>New rule</Button>
+  </div>
+  <input bind:this={fileInput} type="file" accept=".yaml,.yml,application/yaml,text/yaml" class="hidden" onchange={previewImport} />
 </div>
 
 {#if accountRules.length === 0}
@@ -210,6 +263,57 @@
   {#snippet footer()}
     <Button size="dialog" onclick={() => (editing = false)}>Cancel</Button>
     <Button size="dialog" variant="primary" busy={saving} onclick={save}>Save rule</Button>
+  {/snippet}
+</Modal>
+
+{#snippet ruleNames(names: string[])}
+  <ul class="m-0 flex list-none flex-col gap-2 p-0 text-ink2">
+    {#each names as name (name)}<li>{name}</li>{/each}
+  </ul>
+{/snippet}
+
+<Modal bind:open={importing} title="Import rules">
+  {#if importPreview}
+    {#if importPreview.added.length > 0}
+      <div class="flex flex-col gap-3 text-sm">
+        <span class="font-semibold">New rules</span>
+        {@render ruleNames(importPreview.added)}
+      </div>
+    {/if}
+    {#if importPreview.existing.length > 0}
+      <div class="flex flex-col gap-3 text-sm">
+        <span class="font-semibold">Already exist</span>
+        {@render ruleNames(importPreview.existing)}
+        <div class="self-start">
+          <Segmented
+            label="Rules with the same name"
+            bind:value={onConflict}
+            options={[
+              { value: 'skip', label: 'Keep mine' },
+              { value: 'replace', label: 'Replace with file' },
+            ]} />
+        </div>
+      </div>
+    {/if}
+    {#if importPreview.invalid.length > 0}
+      <div class="flex flex-col gap-3 text-sm">
+        <span class="font-semibold">Cannot be imported</span>
+        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+          {#each importPreview.invalid as invalid, index (index)}
+            <li><span class="text-ink">{invalid.name}</span> <span class="text-bad">{invalid.error}</span></li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
+    {#if importPreview.added.length + importPreview.existing.length + importPreview.invalid.length === 0}
+      <span class="text-ink2">The file has no rules.</span>
+    {/if}
+  {/if}
+  {#snippet footer()}
+    <Button size="dialog" onclick={() => (importing = false)}>Cancel</Button>
+    <Button size="dialog" variant="primary" busy={applyingImport} disabled={importCount === 0} onclick={applyImport}>
+      Import {formatNumber(importCount)} {importCount === 1 ? 'rule' : 'rules'}
+    </Button>
   {/snippet}
 </Modal>
 
