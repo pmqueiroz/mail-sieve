@@ -12,12 +12,12 @@ There are two kinds:
 
 | Kind | Where it comes from |
 | --- | --- |
-| Core | Ships with :mailsieve. Most are on by default; the AI categorizer and shared blocklists start off. |
+| Core | Ships with :mailsieve. Off until you enable it. |
 | Community | A folder you place in the `plugins` directory. Off until you enable it. |
 
 ## Ghoul wingman
 
-The wingman is a small ghoul that floats in the bottom-right corner on wide screens. It reads the same index as the rest of the app and offers one suggestion at a time:
+The wingman is your AI mail assistant: a friendly ghoul that floats in the bottom-right corner on wide screens, watches your mailbox and suggests what to clean up next, one suggestion at a time. Connect it to Claude, any OpenAI-compatible model or a model running locally in Docker (see [Connecting an AI model](#connecting-an-ai-model)), and it picks the senders and lists worth your attention and tells you why. Without a model it runs on built-in rules:
 
 - **A sender you never open.** When every message from a sender is unread and there are at least 20 of them, it offers to move them to trash.
 - **A mailing list you never read.** When every message from a list is unread and there are at least 10, it offers to create a rule that archives the list after every sync.
@@ -86,13 +86,13 @@ Some senders keep mailing after you unsubscribe. Two days after an unsubscribe c
 
 ## AI categorizer
 
-Off by default. It splits the People category on Overview into your own groups, such as Work, Finance or Family and friends. **Configure** picks an AI provider or a local Docker model, exactly like the wingman, and the list of categories.
+It splits the People category on Overview into your own groups, such as Work, Finance or Family and friends. **Configure** picks an AI provider or a local Docker model, exactly like the wingman, and the list of categories.
 
 **Sort with AI** sends the names, addresses, message counts and up to three subjects of your top 150 People senders to that model. Message bodies are never sent. Each group then shows its senders and message count; open one to see the senders, or to **Mark all read** or **Archive all** in one go. The result is saved on the server. **Sort again** after new senders arrive or after you change the categories.
 
 ## Shared blocklists
 
-Off by default. A **Blocklists** section on the Rules screen checks a public list of spam or tracker domains against your mail. Paste the link to the list and choose **Add and check**. Plain lists of domains, hosts files (`0.0.0.0 ads.example.com`) and adblock lists (`||ads.example.com^`) all work, and a listed domain also covers its subdomains.
+A **Blocklists** section on the Rules screen checks a public list of spam or tracker domains against your mail. Paste the link to the list and choose **Add and check**. Plain lists of domains, hosts files (`0.0.0.0 ads.example.com`) and adblock lists (`||ads.example.com^`) all work, and a listed domain also covers its subdomains.
 
 The result shows the listed domains that sent you mail. Untick any you want to keep, then:
 
