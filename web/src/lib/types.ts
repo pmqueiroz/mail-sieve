@@ -130,6 +130,17 @@ export interface StillSending {
   last_date: number;
 }
 
+export interface BlocklistMatch {
+  domain: string;
+  messages: number;
+  sender_domains: string[];
+}
+
+export interface BlocklistPreview {
+  listed: number;
+  matches: BlocklistMatch[];
+}
+
 export type JobState = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
 
 export interface Job {
