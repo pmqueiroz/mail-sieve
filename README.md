@@ -124,6 +124,10 @@ MAIL_SIEVE_TEST_IMAP=127.0.0.1:3143 cargo test --workspace
 cargo run --release -p mail-sieve-imap --example seed -- 127.0.0.1:3143 someone 20000
 ```
 
+The website (landing page and user docs) lives in [`site/`](./site):
+`cd site && npm install && npm run dev`. Docs pages are Markdown in
+`site/src/content/docs/`.
+
 Project documentation for contributors and coding agents lives in
 [`AGENTS.md`](./AGENTS.md) and [`.refs/`](./.refs): architecture, security
 model, CI and conventions.
