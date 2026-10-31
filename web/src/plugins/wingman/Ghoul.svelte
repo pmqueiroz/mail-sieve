@@ -53,10 +53,10 @@
   );
 </script>
 
-<div bind:this={element} class="flex select-none flex-col items-center" style:width="{size}px">
+<div bind:this={element} class="flex select-none flex-col items-center transition-[width] duration-500 ease-out motion-reduce:transition-none" style:width="{size}px">
   <div class="animate-ghoul-float motion-reduce:animate-none">
     <div class="origin-[50%_90%] transition-transform duration-500 motion-reduce:animate-none {body}">
-      <svg class="block overflow-visible drop-shadow-ghoul" width={size} height={(size * 150) / 140} viewBox="-10 -14 140 150" aria-hidden="true">
+      <svg class="block overflow-visible drop-shadow-ghoul transition-[width,height] duration-500 ease-out motion-reduce:transition-none" style:width="{size}px" style:height="{(size * 150) / 140}px" viewBox="-10 -14 140 150" aria-hidden="true">
         <defs>
           <radialGradient id={gradient} cx="38%" cy="28%" r="85%">
             <stop offset="0%" class="[stop-color:var(--color-ghoul-hi)]" />
