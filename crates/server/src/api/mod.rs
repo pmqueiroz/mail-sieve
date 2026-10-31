@@ -50,6 +50,7 @@ pub fn router(state: AppState) -> Router {
         .route("/jobs", get(jobs::list))
         .route("/jobs/{id}", get(jobs::get))
         .route("/jobs/{id}/cancel", post(jobs::cancel))
+        .route("/jobs/{id}/undo", post(jobs::undo))
         .route("/events", get(jobs::events))
         .route("/rules", get(rules::list).post(rules::create))
         .route("/rules/{id}", put(rules::update).delete(rules::remove))

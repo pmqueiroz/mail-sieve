@@ -14,6 +14,7 @@ mod rules;
 mod scheduler;
 mod state;
 mod sync;
+mod undo;
 mod vault;
 
 use std::io::BufRead;

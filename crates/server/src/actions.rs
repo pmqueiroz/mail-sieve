@@ -23,7 +23,7 @@ pub enum Selection {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum LocalEffect {
+pub(crate) enum LocalEffect {
     Remove,
     Flags { add: Flags, remove: Flags },
     RemoveLabel(String),
@@ -72,13 +72,13 @@ pub async fn enqueue(
     Ok(job_id)
 }
 
-fn special<'a>(mailboxes: &'a [Mailbox], special_use: &str) -> Option<&'a Mailbox> {
+pub(crate) fn special<'a>(mailboxes: &'a [Mailbox], special_use: &str) -> Option<&'a Mailbox> {
     mailboxes
         .iter()
         .find(|mailbox| mailbox.special_use.as_deref() == Some(special_use))
 }
 
-fn plan(
+pub(crate) fn plan(
     provider: Provider,
     action: &Action,
     source: &Mailbox,

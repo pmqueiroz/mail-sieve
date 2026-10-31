@@ -39,6 +39,11 @@ pub async fn cancel(State(state): State<AppState>, Path(id): Path<i64>) -> Resul
     Ok(Json(json!({ "cancelled": true })))
 }
 
+pub async fn undo(State(state): State<AppState>, Path(id): Path<i64>) -> Result<Json<Value>> {
+    let job_id = crate::undo::start(&state, id).await?;
+    Ok(Json(json!({ "job_id": job_id })))
+}
+
 pub async fn events(
     State(state): State<AppState>,
 ) -> Sse<impl Stream<Item = std::result::Result<SseEvent, Infallible>>> {

@@ -20,6 +20,34 @@ pub async fn search_all_uids(conn: &mut Connection) -> Result<Vec<u32>> {
     Ok(uids)
 }
 
+const MESSAGE_ID_SEARCH_CHUNK: usize = 25;
+
+fn quote(value: &str) -> String {
+    format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
+}
+
+pub fn message_id_search(ids: &[String]) -> String {
+    let terms: Vec<String> = ids
+        .iter()
+        .map(|id| format!("HEADER Message-ID {}", quote(id)))
+        .collect();
+    format!(
+        "{}{}",
+        "OR ".repeat(terms.len().saturating_sub(1)),
+        terms.join(" ")
+    )
+}
+
+pub async fn search_message_ids(conn: &mut Connection, ids: &[String]) -> Result<Vec<u32>> {
+    let mut uids = Vec::new();
+    for chunk in ids.chunks(MESSAGE_ID_SEARCH_CHUNK) {
+        uids.extend(conn.session.uid_search(message_id_search(chunk)).await?);
+    }
+    uids.sort_unstable();
+    uids.dedup();
+    Ok(uids)
+}
+
 pub async fn fetch_headers(conn: &mut Connection, uids: &UidSet) -> Result<Vec<MessageMeta>> {
     if uids.is_empty() {
         return Ok(Vec::new());
@@ -85,4 +113,21 @@ pub async fn fetch_raw(conn: &mut Connection, uid: u32) -> Result<Option<Vec<u8>
         }
     }
     Ok(body)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builds_nested_or_searches() {
+        assert_eq!(
+            message_id_search(&["a@x".into()]),
+            "HEADER Message-ID \"a@x\""
+        );
+        assert_eq!(
+            message_id_search(&["a@x".into(), "b@x".into(), "c\"@x".into()]),
+            "OR OR HEADER Message-ID \"a@x\" HEADER Message-ID \"b@x\" HEADER Message-ID \"c\\\"@x\""
+        );
+    }
 }

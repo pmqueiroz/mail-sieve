@@ -90,6 +90,15 @@ pub fn record_undo(conn: &Connection, job_id: i64) -> Result<()> {
     Ok(())
 }
 
+pub fn mark_undone(conn: &Connection, job_id: i64, undo_job_id: i64) -> Result<bool> {
+    let changed = conn.execute(
+        "UPDATE jobs SET payload = json_set(payload, '$.undone_by', ?2) \
+         WHERE id = ?1 AND json_extract(payload, '$.undone_by') IS NULL",
+        params![job_id, undo_job_id],
+    )?;
+    Ok(changed > 0)
+}
+
 pub fn undo_targets(conn: &Connection, job_id: i64) -> Result<Vec<UndoTarget>> {
     let mut stmt = conn.prepare_cached(
         "SELECT mailbox_id, uid, message_id FROM job_undo WHERE job_id = ?1 ORDER BY mailbox_id, uid",
@@ -312,6 +321,10 @@ mod tests {
         );
         assert_eq!(job.payload["action"], "trash");
         let undo = store.read(|conn| undo_targets(conn, job.id)).unwrap();
+        assert!(store.write(|tx| mark_undone(tx, job.id, 99)).unwrap());
+        assert!(!store.write(|tx| mark_undone(tx, job.id, 100)).unwrap());
+        let undone = store.read(|conn| get(conn, job.id)).unwrap();
+        assert_eq!(undone.payload["undone_by"], 99);
         assert_eq!(undo.iter().map(|t| t.uid).collect::<Vec<_>>(), vec![1, 2]);
 
         store.write(|tx| mark_running(tx, job.id)).unwrap();

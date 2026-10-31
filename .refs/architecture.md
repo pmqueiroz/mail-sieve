@@ -162,7 +162,7 @@ Adding a provider: extend `Provider` (detection, `default_sync`,
 
 ## Jobs
 
-- Kinds: `sync`, `action`. One job per account runs at a time (lanes keyed
+- Kinds: `sync`, `action`, `undo`. One job per account runs at a time (lanes keyed
   by account id); different accounts run in parallel. The runner wakes on
   `Notify` or every 5 s.
 - Startup requeues jobs left `running`. Cancellation is a state flip that
@@ -171,6 +171,27 @@ Adding a provider: extend `Provider` (detection, `default_sync`,
   (throttled to about 3 per second during sync).
 - After a successful sync, rules with `run_after_sync` enqueue their
   actions.
+
+### Undo
+
+`POST /jobs/{id}/undo` (`server/src/undo.rs`) reverses a finished or
+cancelled action job, once. The original job's payload gets `undone_by` in
+the same transaction that creates the undo job, so a double click cannot
+undo twice.
+
+- Flag actions (`mark_read`, `mark_unread`, `flag`, `unflag`) become a
+  normal `action` job with the inverse action over the `job_undo` targets;
+  their UIDs did not change.
+- Moves (`archive`, `trash`, `move:`) become an `undo` job. For each source
+  folder it re-derives the destination with the same `actions::plan` the
+  original used, `UID SEARCH`es the destination for the saved Message-IDs
+  (25 per nested `OR`), and moves the hits back. Gmail archive from All
+  Mail re-adds the `\Inbox` label instead. Messages without a Message-ID
+  cannot be found again and stay where they are.
+- The undo job ends by enqueueing a sync, because restored messages have
+  new UIDs the index has not seen.
+- `delete` is never undoable: it is gone from the server (or, on Gmail, in
+  Trash where the user can recover it by hand).
 
 ## Rules, scheduler, IDLE
 
@@ -218,7 +239,8 @@ follow-up action (archive or trash, never delete) is enqueued for
 - No STARTTLS: use implicit TLS (993) or plain for local servers only. No
   "accept invalid certificates" option for self-signed homelab servers.
 - Single admin user; multi-user is not modeled.
-- No undo beyond Trash-first defaults and the `action_log` audit table.
+- Undo needs Message-IDs for moved messages; mail without one is not
+  restored. Undo of an undo is not offered.
 - Gmail permanent delete is not exposed; Gmail purges Trash itself.
 - `in:` matches folder names exactly (case-insensitive) or Gmail labels; no
   folder hierarchy wildcards.

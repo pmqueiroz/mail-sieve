@@ -13,7 +13,10 @@ pub use connection::{
     Capabilities, Connection, Credentials, ImapConfig, MailboxStatus, Security, Session, connect,
 };
 pub use error::{Error, Result};
-pub use fetch::{FlagState, fetch_flags, fetch_headers, fetch_raw, search_all_uids};
+pub use fetch::{
+    FlagState, fetch_flags, fetch_headers, fetch_raw, message_id_search, search_all_uids,
+    search_message_ids,
+};
 pub use folders::{Folder, Provider, list_folders};
 pub use mailbox_name::decode_mailbox_name;
 pub use parallel::{HeaderFetchPlan, fetch_headers_parallel};

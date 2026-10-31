@@ -10,6 +10,7 @@ pub enum Operation {
     RemoveFlags(Flags),
     Expunge,
     RemoveGmailLabel(String),
+    AddGmailLabel(String),
 }
 
 fn flag_list(flags: Flags) -> String {
@@ -95,6 +96,9 @@ pub async fn apply(conn: &mut Connection, uids: &UidSet, operation: &Operation) 
         }
         Operation::RemoveGmailLabel(label) => {
             store(conn, uids, format!("-X-GM-LABELS ({})", gmail_label(label))).await?
+        }
+        Operation::AddGmailLabel(label) => {
+            store(conn, uids, format!("+X-GM-LABELS ({})", gmail_label(label))).await?
         }
     }
     Ok(())

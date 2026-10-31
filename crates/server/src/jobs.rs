@@ -7,7 +7,7 @@ use serde_json::json;
 
 use crate::error::Result;
 use crate::state::AppState;
-use crate::{actions, rules, sync};
+use crate::{actions, rules, sync, undo};
 
 const POLL_INTERVAL: Duration = Duration::from_secs(5);
 const GLOBAL_LANE: i64 = 0;
@@ -92,6 +92,7 @@ async fn execute(state: &AppState, job: Job) {
             None => Ok(()),
         },
         "action" => actions::run(state, &job).await,
+        "undo" => undo::run(state, &job).await,
         other => Err(crate::error::Error::Internal(format!(
             "unknown job kind {other}"
         ))),

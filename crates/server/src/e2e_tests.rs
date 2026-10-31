@@ -279,6 +279,42 @@ async fn full_flow_against_dovecot() {
     assert_eq!(search_all_uids(&mut conn).await.unwrap().len(), 200);
     assert_eq!(conn.examine("Archive").await.unwrap().exists, 100);
 
+    let (_, overview) = harness
+        .call("GET", &format!("/api/accounts/{account_id}/overview"), None)
+        .await;
+    assert_eq!(overview["total"], 200, "{overview}");
+    assert!(overview["freed_week_bytes"].as_u64().unwrap() > 0);
+
+    let archive_job = job["id"].as_i64().unwrap();
+    let (status, response) = harness
+        .call("POST", &format!("/api/jobs/{archive_job}/undo"), None)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{response}");
+    let undo_job = response["job_id"].as_i64().unwrap();
+    let undo = harness.wait_for_job(undo_job).await;
+    assert_eq!(undo["state"], "done", "{undo}");
+    let (status, _) = harness
+        .call("POST", &format!("/api/jobs/{archive_job}/undo"), None)
+        .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    conn.examine("INBOX").await.unwrap();
+    assert_eq!(search_all_uids(&mut conn).await.unwrap().len(), 300);
+    assert_eq!(conn.examine("Archive").await.unwrap().exists, 0);
+    let (_, job_list) = harness.call("GET", "/api/jobs", None).await;
+    let resync = job_list
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|job| job["kind"] == "sync" && job["id"].as_i64().unwrap() > undo_job)
+        .unwrap()["id"]
+        .as_i64()
+        .unwrap();
+    harness.wait_for_job(resync).await;
+    assert_eq!(
+        harness.count(account_id, "from:deals@shop.example").await,
+        100
+    );
+
     let (_, page) = harness
         .call(
             "GET",
@@ -344,7 +380,7 @@ async fn full_flow_against_dovecot() {
         .wait_for_job(response["job_id"].as_i64().unwrap())
         .await;
     assert_eq!(job["state"], "done", "{job}");
-    assert_eq!(harness.count(account_id, "in:inbox").await, 207);
+    assert_eq!(harness.count(account_id, "in:inbox").await, 307);
     assert_eq!(harness.count(account_id, "is:read").await, 5);
 
     let (status, _) = harness.call("POST", "/api/auth/logout", None).await;
