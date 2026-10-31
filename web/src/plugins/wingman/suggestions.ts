@@ -1,7 +1,9 @@
 import { api, withParams } from '../../lib/api';
+import type { CompletionTarget } from '../../lib/plugins/config';
 import { formatNumber } from '../../lib/format';
 import { groupQuery } from '../../lib/query';
-import type { Account, ActionResponse, Group, Rule } from '../../lib/types';
+import type { Account, ActionResponse, Group, GroupBy, Rule } from '../../lib/types';
+import { type ModelPick, modelPicks } from './model';
 
 const NEVER_OPENED_MIN = 20;
 const QUIET_LIST_MIN = 10;
@@ -28,6 +30,14 @@ const plural = (count: number, word: string) => `${formatNumber(count)} ${word}$
 
 const neverOpened = (group: Group, min: number) => group.pin === null && group.message_count >= min && group.unread_count === group.message_count;
 
+const nameOf = (group: Group) => group.name || group.key;
+
+type Wording = Pick<Suggestion, 'lead' | 'strong' | 'tail'>;
+
+function modelWording(group: Group, reason: string): Wording | undefined {
+  return reason ? { lead: '', strong: nameOf(group), tail: `: ${reason}` } : undefined;
+}
+
 function syncFailure(account: Account): Suggestion {
   return {
     key: `sync-error:${account.id}`,
@@ -46,15 +56,16 @@ function syncFailure(account: Account): Suggestion {
   };
 }
 
-function clearSender(accountId: number, group: Group): Suggestion {
-  const who = group.name || group.key;
+function clearSender(accountId: number, group: Group, wording?: Wording, key = `never-opened:${accountId}:${group.key}`): Suggestion {
+  const who = nameOf(group);
   const count = group.message_count;
   return {
-    key: `never-opened:${accountId}:${group.key}`,
+    key,
     alert: false,
     lead: 'You never open mail from ',
     strong: who,
     tail: `. ${plural(count, 'message')} are sitting there. Clear them out?`,
+    ...wording,
     primary: `Trash ${formatNumber(count)}`,
     secondary: 'Not now',
     ack: `Okay. I won't bring up ${who} again this week.`,
@@ -71,15 +82,16 @@ function clearSender(accountId: number, group: Group): Suggestion {
   };
 }
 
-function archiveList(accountId: number, group: Group): Suggestion {
-  const who = group.name || group.key;
+function archiveList(accountId: number, group: Group, wording?: Wording, key = `quiet-list:${accountId}:${group.key}`): Suggestion {
+  const who = nameOf(group);
   const query = groupQuery('list', group.key);
   return {
-    key: `quiet-list:${accountId}:${group.key}`,
+    key,
     alert: false,
     lead: '',
     strong: who,
     tail: ` sent ${plural(group.message_count, 'message')} and you opened none. Want a rule that archives them after every sync?`,
+    ...wording,
     primary: 'Create rule',
     secondary: 'Skip',
     ack: "Skipped. I'll keep an eye on them.",
@@ -97,21 +109,64 @@ function archiveList(accountId: number, group: Group): Suggestion {
   };
 }
 
+function markRead(accountId: number, groupBy: GroupBy, group: Group, wording?: Wording): Suggestion {
+  const who = nameOf(group);
+  const count = group.unread_count;
+  return {
+    key: `ai-read:${accountId}:${groupBy}:${group.key}`,
+    alert: false,
+    lead: '',
+    strong: who,
+    tail: ` has ${plural(count, 'unread message')}. Mark them read?`,
+    ...wording,
+    primary: `Mark ${formatNumber(count)} read`,
+    secondary: 'Not now',
+    ack: `Okay. I won't bring up ${who} again this week.`,
+    snoozeDays: 7,
+    accept: async () => {
+      const { job_id } = await api.post<ActionResponse>(`/accounts/${accountId}/actions`, {
+        query: `${groupQuery(groupBy, group.key)} is:unread`,
+        action: 'mark_read',
+        confirm: false,
+      });
+      if (job_id === null) return { kind: 'done', done: `Nothing unread from ${who}.`, undo: null };
+      return { kind: 'job', jobId: job_id, working: `Marking ${plural(count, 'message')} read`, done: `${plural(count, 'message')} from ${who} marked read.` };
+    },
+  };
+}
+
+function fromPick(accountId: number, pick: ModelPick, senders: Group[], lists: Group[]): Suggestion | null {
+  const group = (pick.kind === 'sender' ? senders : lists).find((candidate) => candidate.key === pick.key);
+  if (!group) return null;
+  const wording = modelWording(group, pick.reason);
+  if (pick.action === 'mark_read') return group.unread_count > 0 ? markRead(accountId, pick.kind, group, wording) : null;
+  if (pick.action === 'trash') return clearSender(accountId, group, wording, `ai-trash:${accountId}:${group.key}`);
+  return archiveList(accountId, group, wording, `ai-archive:${accountId}:${group.key}`);
+}
+
 async function candidates(accountId: number, group: 'sender' | 'list'): Promise<Group[]> {
   return api.get<Group[]>(withParams(`/accounts/${accountId}/groups`, { group, sort: 'unread', limit: CANDIDATES }));
 }
 
-export async function findSuggestions(account: Account, syncing: boolean): Promise<Suggestion[]> {
+export interface ModelOptions {
+  target: CompletionTarget;
+  analyzing: (busy: boolean) => void;
+}
+
+export async function findSuggestions(account: Account, syncing: boolean, model: ModelOptions | null): Promise<Suggestion[]> {
   const [senders, lists, rules] = await Promise.all([candidates(account.id, 'sender'), candidates(account.id, 'list'), api.get<Rule[]>('/rules')]);
   const ruled = rules.filter((rule) => rule.account_id === account.id).map((rule) => rule.query);
+  const unruled = (group: Group) => !ruled.some((query) => query.includes(groupQuery('list', group.key)));
+  const senderPool = senders.filter((group) => group.list_id === null && group.pin === null && group.unread_count > 0);
+  const listPool = lists.filter((group) => group.pin === null && group.unread_count > 0 && unruled(group));
   const suggestions: Suggestion[] = [];
   if (account.last_error && !syncing) suggestions.push(syncFailure(account));
-  suggestions.push(...senders.filter((group) => group.list_id === null && neverOpened(group, NEVER_OPENED_MIN)).map((group) => clearSender(account.id, group)));
-  suggestions.push(
-    ...lists
-      .filter((group) => neverOpened(group, QUIET_LIST_MIN))
-      .filter((group) => !ruled.some((query) => query.includes(groupQuery('list', group.key))))
-      .map((group) => archiveList(account.id, group)),
-  );
+  const picks = model ? await modelPicks(model.target, account.id, senderPool, listPool, model.analyzing) : null;
+  if (picks) {
+    suggestions.push(...picks.flatMap((pick) => fromPick(account.id, pick, senderPool, listPool) ?? []));
+    return suggestions;
+  }
+  suggestions.push(...senderPool.filter((group) => neverOpened(group, NEVER_OPENED_MIN)).map((group) => clearSender(account.id, group)));
+  suggestions.push(...listPool.filter((group) => neverOpened(group, QUIET_LIST_MIN)).map((group) => archiveList(account.id, group)));
   return suggestions;
 }

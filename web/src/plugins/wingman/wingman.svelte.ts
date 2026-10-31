@@ -1,5 +1,7 @@
 import { api, errorMessage } from '../../lib/api';
 import { percent } from '../../lib/format';
+import { aiTarget, type AiSettings, withAiDefaults } from '../../lib/plugins/ai/settings';
+import { loadPluginConfig } from '../../lib/plugins/config';
 import { session } from '../../lib/session.svelte';
 import { runningSync } from '../../lib/sync';
 import { toasts } from '../../lib/toasts.svelte';
@@ -7,6 +9,7 @@ import type { Job } from '../../lib/types';
 import type { Mood } from './Ghoul.svelte';
 import { findSuggestions, type Outcome, type Suggestion } from './suggestions';
 
+const PLUGIN_ID = 'wingman';
 const STORAGE_KEY = 'mail-sieve.wingman';
 const DAY_MS = 86_400_000;
 const DONE_MS = 3000;
@@ -37,6 +40,7 @@ class Wingman {
   poked = $state(false);
   undoable = $state(false);
   job = $state<{ id: number; done: string } | null>(null);
+  analyzing = $state(false);
   private queue: Suggestion[] = [];
   private undoAction: (() => Promise<void>) | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -47,7 +51,9 @@ class Wingman {
 
   thinking = $derived.by(() => {
     if (this.phase === 'working') return this.message;
-    if (this.phase !== 'idle' || !this.syncJob) return null;
+    if (this.phase !== 'idle') return null;
+    if (this.analyzing) return 'Looking through your senders';
+    if (!this.syncJob) return null;
     return this.syncJob.total > 0 ? `Syncing your mail · ${percent(this.syncJob.done, this.syncJob.total)}%` : 'Checking for new mail';
   });
 
@@ -77,7 +83,11 @@ class Wingman {
       this.present();
       return;
     }
-    const found = await findSuggestions(account, this.syncJob !== null);
+    const config = await loadPluginConfig<Partial<AiSettings>>(PLUGIN_ID);
+    if (generation !== this.generation) return;
+    const target = aiTarget(withAiDefaults(config.settings), PLUGIN_ID);
+    const model = target ? { target, analyzing: (busy: boolean) => (this.analyzing = busy) } : null;
+    const found = await findSuggestions(account, this.syncJob !== null, model);
     if (generation !== this.generation) return;
     this.queue = found;
     if (this.phase === 'suggest' && !this.pending().some((item) => item.key === this.current?.key)) this.phase = 'idle';
