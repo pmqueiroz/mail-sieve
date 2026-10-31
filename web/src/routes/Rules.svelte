@@ -1,36 +1,41 @@
 <script lang="ts">
   import { api, errorMessage } from '../lib/api';
-  import Badge from '../lib/components/Badge.svelte';
   import Button from '../lib/components/Button.svelte';
+  import Chip from '../lib/components/Chip.svelte';
   import ConfirmDialog from '../lib/components/ConfirmDialog.svelte';
-  import EmptyState from '../lib/components/EmptyState.svelte';
   import Field from '../lib/components/Field.svelte';
   import Modal from '../lib/components/Modal.svelte';
-  import QueryBar from '../lib/components/QueryBar.svelte';
-  import { actionLabel, formatRelative } from '../lib/format';
+  import Pill from '../lib/components/Pill.svelte';
+  import TextInput from '../lib/components/TextInput.svelte';
+  import { liveTotals } from '../lib/count.svelte';
+  import { describeRule, describeSchedule } from '../lib/describe';
+  import { actionSentence, formatNumber, formatWhen } from '../lib/format';
+  import { session } from '../lib/session.svelte';
   import { toasts } from '../lib/toasts.svelte';
   import type { Mailbox, Rule } from '../lib/types';
 
-  let { accountId }: { accountId: number } = $props();
+  type Schedule = 'after_sync' | 'interval' | 'manual';
+  type Draft = { id: number | null; name: string; query: string; action: string; enabled: boolean; schedule: Schedule; interval: number };
 
-  type Draft = {
-    id: number | null;
-    name: string;
-    query: string;
-    action: string;
-    enabled: boolean;
-    schedule: 'interval' | 'after_sync' | 'manual';
-    interval: number;
-  };
+  const DEFAULT_INTERVAL = 60;
+  const MOVE_PREFIX = 'move:';
+  const ACTIONS: [string, string][] = [
+    ['archive', 'Archive'],
+    ['trash', 'Move to trash'],
+    ['mark_read', 'Mark read'],
+  ];
+  const EXTRA_ACTIONS: Record<string, string> = { mark_unread: 'Mark unread', flag: 'Flag', unflag: 'Unflag' };
+
+  let { accountId }: { accountId: number } = $props();
 
   const blank = (): Draft => ({
     id: null,
     name: '',
-    query: 'has:unsubscribe older_than:30d',
+    query: 'has:list older_than:30d',
     action: 'archive',
     enabled: true,
     schedule: 'after_sync',
-    interval: 60,
+    interval: DEFAULT_INTERVAL,
   });
 
   let rules = $state<Rule[]>([]);
@@ -42,13 +47,15 @@
   let confirmOpen = $state(false);
 
   const accountRules = $derived(rules.filter((rule) => rule.account_id === accountId));
+  const live = liveTotals(
+    () => accountId,
+    () => draft.query,
+  );
+  const movingToFolder = $derived(draft.action.startsWith(MOVE_PREFIX));
 
   async function load() {
     try {
-      [rules, mailboxes] = await Promise.all([
-        api.get<Rule[]>('/rules'),
-        api.get<Mailbox[]>(`/accounts/${accountId}/mailboxes`),
-      ]);
+      [rules, mailboxes] = await Promise.all([api.get<Rule[]>('/rules'), api.get<Mailbox[]>(`/accounts/${accountId}/mailboxes`)]);
     } catch (error) {
       toasts.show(errorMessage(error), 'error');
     }
@@ -68,7 +75,7 @@
           action: rule.action,
           enabled: rule.enabled,
           schedule: rule.run_after_sync ? 'after_sync' : rule.interval_minutes ? 'interval' : 'manual',
-          interval: rule.interval_minutes ?? 60,
+          interval: rule.interval_minutes ?? DEFAULT_INTERVAL,
         }
       : blank();
     editing = true;
@@ -82,7 +89,7 @@
       query: draft.query,
       action: draft.action,
       enabled: draft.enabled,
-      interval_minutes: draft.schedule === 'interval' ? draft.interval : null,
+      interval_minutes: draft.schedule === 'interval' ? Number(draft.interval) : null,
       run_after_sync: draft.schedule === 'after_sync',
     };
     try {
@@ -108,8 +115,9 @@
 
   async function runNow(rule: Rule) {
     try {
-      const response = await api.post<{ job_id: number | null }>(`/rules/${rule.id}/run`);
-      toasts.show(response.job_id === null ? 'No messages matched.' : `Rule "${rule.name}" queued.`, 'success');
+      const { job_id } = await api.post<{ job_id: number | null }>(`/rules/${rule.id}/run`);
+      if (job_id === null) toasts.show('No messages matched.');
+      else toasts.track({ jobId: job_id, action: rule.action, count: null, who: `rule ${rule.name}`, undoable: true });
       await load();
     } catch (error) {
       toasts.show(errorMessage(error), 'error');
@@ -123,82 +131,85 @@
     await load();
   }
 
-  function schedule(rule: Rule) {
-    if (rule.run_after_sync) return 'after every sync';
-    if (rule.interval_minutes) return `every ${rule.interval_minutes} min`;
-    return 'manual only';
+  function lastRun(rule: Rule): string {
+    const job = session.jobs.find((candidate) => candidate.payload.origin === `rule:${rule.id}` && candidate.state === 'done');
+    const when = formatWhen(rule.last_run_at);
+    return job ? `${when}, ${actionSentence(rule.action, job.done, 'past').toLowerCase()}` : when;
   }
 </script>
 
-<section class="page">
-  <div class="page-header">
-    <h1>Rules</h1>
-    <Button variant="primary" onclick={() => edit()}>New rule</Button>
-  </div>
+<div class="mt-2 mb-10 flex flex-wrap items-center gap-6">
+  <span class="min-w-120 flex-1 text-ink2">Rules run a saved search and an action on their own. They never delete permanently.</span>
+  <Button size="2xl" variant="primary" onclick={() => edit()}>New rule</Button>
+</div>
 
-  {#if accountRules.length === 0}
-    <EmptyState title="No rules yet">
-      <p>Rules apply an action to every message matching a query, after each sync or on a schedule. Permanent deletion is never automated.</p>
-      <Button variant="primary" onclick={() => edit()}>Create a rule</Button>
-    </EmptyState>
-  {:else}
-    <div class="rules">
-      {#each accountRules as rule (rule.id)}
-        <article class="rule card" class:disabled={!rule.enabled}>
-          <div class="main">
-            <div class="title">
-              <strong>{rule.name}</strong>
-              <Badge tone="accent">{actionLabel(rule.action)}</Badge>
-              <Badge>{schedule(rule)}</Badge>
-              {#if !rule.enabled}<Badge tone="warning">paused</Badge>{/if}
-            </div>
-            <code class="mono">{rule.query}</code>
-            <span class="muted small">Last run {formatRelative(rule.last_run_at)}</span>
-          </div>
-          <div class="toolbar">
-            <Button size="sm" onclick={() => runNow(rule)}>Run now</Button>
-            <Button size="sm" onclick={() => toggle(rule)}>{rule.enabled ? 'Pause' : 'Resume'}</Button>
-            <Button size="sm" onclick={() => edit(rule)}>Edit</Button>
-            <Button size="sm" variant="danger" onclick={() => ((deleting = rule), (confirmOpen = true))}>Delete</Button>
-          </div>
-        </article>
+{#if accountRules.length === 0}
+  <div class="py-24 text-center text-ink2">No rules yet. A rule archives or tidies matching mail after every sync, so the inbox stays clean on its own.</div>
+{/if}
+
+<div class="grid grid-cols-[repeat(auto-fill,minmax(--spacing(160),1fr))] gap-8">
+  {#each accountRules as rule (rule.id)}
+    <article class="flex flex-col gap-7 rounded-3xl border border-line p-10 {rule.enabled ? 'opacity-100' : 'opacity-65'}">
+      <div class="flex items-center gap-5">
+        <span class="flex-1 font-semibold">{rule.name}</span>
+        <Pill tone={rule.enabled ? 'good' : 'muted'}>{rule.enabled ? 'Active' : 'Paused'}</Pill>
+      </div>
+      <div class="text-pretty text-xl leading-row font-medium tracking-snug">{describeRule(rule)}</div>
+      <code class="self-start rounded-sm bg-chip px-5 py-2 font-mono text-xs text-ink2">{rule.query}</code>
+      <div class="flex flex-wrap gap-9 text-xs text-ink3"><span>{describeSchedule(rule)}</span><span>Last run {lastRun(rule)}</span></div>
+      <div class="flex flex-wrap gap-4">
+        <Button variant="primary" onclick={() => runNow(rule)}>Run now</Button>
+        <Button onclick={() => toggle(rule)}>{rule.enabled ? 'Pause' : 'Resume'}</Button>
+        <Button onclick={() => edit(rule)}>Edit</Button>
+        <Button variant="danger-text" onclick={() => ((deleting = rule), (confirmOpen = true))}>Delete</Button>
+      </div>
+    </article>
+  {/each}
+</div>
+
+<Modal bind:open={editing} title="Rule">
+  <Field label="Name"><TextInput bind:value={draft.name} placeholder="Old newsletters" /></Field>
+  <Field label="Search">
+    <TextInput mono spellcheck={false} bind:value={draft.query} placeholder="has:list older_than:30d" />
+    {#snippet hint()}
+      {#if live.error}<span class="text-bad">{live.error}</span>{:else}Matches <b class="text-ink">{formatNumber(live.totals?.count ?? 0)}</b> messages right now{/if}
+    {/snippet}
+  </Field>
+  <div class="flex flex-col gap-3 text-sm font-semibold">
+    Action
+    <div class="flex flex-wrap gap-3">
+      {#each ACTIONS as [value, label] (value)}
+        <Chip active={draft.action === value} muted onclick={() => (draft.action = value)}>{label}</Chip>
       {/each}
+      {#if EXTRA_ACTIONS[draft.action]}
+        <Chip active muted onclick={() => {}}>{EXTRA_ACTIONS[draft.action]}</Chip>
+      {/if}
+      {#if mailboxes.length > 0}
+        <Chip active={movingToFolder} muted onclick={() => (draft.action = `${MOVE_PREFIX}${mailboxes[0]!.name}`)}>Move to folder</Chip>
+      {/if}
     </div>
-  {/if}
-</section>
-
-<Modal bind:open={editing} title={draft.id === null ? 'New rule' : 'Edit rule'} width={620}>
-  <Field label="Name"><input type="text" bind:value={draft.name} placeholder="Archive old newsletters" /></Field>
-  <Field label="Messages matching">
-    <QueryBar {accountId} bind:value={draft.query} />
-  </Field>
-  <Field label="Action">
-    <select bind:value={draft.action}>
-      <option value="archive">Archive</option>
-      <option value="trash">Move to trash</option>
-      <option value="mark_read">Mark read</option>
-      <option value="mark_unread">Mark unread</option>
-      <option value="flag">Flag</option>
-      <option value="unflag">Unflag</option>
-      {#each mailboxes as mailbox (mailbox.id)}
-        <option value="move:{mailbox.name}">Move to {mailbox.display_name}</option>
-      {/each}
-    </select>
-  </Field>
-  <Field label="When">
-    <select bind:value={draft.schedule}>
-      <option value="after_sync">After every sync</option>
-      <option value="interval">On a schedule</option>
-      <option value="manual">Only when I run it</option>
-    </select>
-  </Field>
+    {#if movingToFolder}
+      <div class="flex flex-wrap gap-3">
+        {#each mailboxes as mailbox (mailbox.id)}
+          <Chip active={draft.action === `${MOVE_PREFIX}${mailbox.name}`} muted onclick={() => (draft.action = `${MOVE_PREFIX}${mailbox.name}`)}>{mailbox.display_name}</Chip>
+        {/each}
+      </div>
+    {/if}
+  </div>
+  <div class="flex flex-col gap-3 text-sm font-semibold">
+    When
+    <div class="flex flex-wrap gap-3">
+      <Chip active={draft.schedule === 'after_sync'} muted onclick={() => (draft.schedule = 'after_sync')}>After every sync</Chip>
+      <Chip active={draft.schedule === 'interval'} muted onclick={() => (draft.schedule = 'interval')}>Every {draft.interval} minutes</Chip>
+      <Chip active={draft.schedule === 'manual'} muted onclick={() => (draft.schedule = 'manual')}>Manual only</Chip>
+    </div>
+  </div>
   {#if draft.schedule === 'interval'}
-    <Field label="Every (minutes)"><input type="number" min="1" bind:value={draft.interval} /></Field>
+    <Field label="Minutes between runs"><TextInput type="number" min="1" bind:value={draft.interval} /></Field>
   {/if}
-  <label class="inline"><input type="checkbox" bind:checked={draft.enabled} /> Enabled</label>
   {#snippet footer()}
-    <Button variant="ghost" onclick={() => (editing = false)}>Cancel</Button>
-    <Button variant="primary" busy={saving} onclick={save}>Save rule</Button>
+    <Button size="dialog" onclick={() => (editing = false)}>Cancel</Button>
+    <Button size="dialog" variant="primary" busy={saving} onclick={save}>Save rule</Button>
   {/snippet}
 </Modal>
 
@@ -209,43 +220,3 @@
   confirmLabel="Delete rule"
   danger
   onconfirm={remove} />
-
-<style>
-  .rules {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    overflow: auto;
-  }
-  .rule {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-4);
-    padding: var(--space-4);
-    flex-wrap: wrap;
-  }
-  .rule.disabled {
-    opacity: 0.7;
-  }
-  .main {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    min-width: 0;
-  }
-  .title {
-    display: flex;
-    gap: var(--space-2);
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .small {
-    font-size: var(--text-xs);
-  }
-  .inline {
-    display: flex;
-    gap: var(--space-2);
-    align-items: center;
-  }
-</style>
