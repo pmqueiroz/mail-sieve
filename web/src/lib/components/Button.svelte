@@ -1,6 +1,6 @@
 <script lang="ts" module>
   export type ButtonVariant = 'primary' | 'outline' | 'ghost' | 'danger' | 'danger-text' | 'muted-text' | 'inverse' | 'on-dark' | 'on-dark-outline';
-  export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xl-wide' | '2xl' | 'dialog';
+  export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xl-wide' | '2xl' | 'dialog' | 'block';
 
   const variants: Record<ButtonVariant, string> = {
     primary: 'border-0 bg-btn text-btn-ink',
@@ -23,6 +23,7 @@
     'xl-wide': 'h-18 px-8 text-sm',
     '2xl': 'h-19 px-9 text-sm',
     dialog: 'h-20 px-9 text-base',
+    block: 'h-24 w-full px-9 text-control',
   };
 </script>
 
