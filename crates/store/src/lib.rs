@@ -5,6 +5,9 @@ pub mod mailboxes;
 pub mod messages;
 pub mod rules;
 pub mod search;
+pub mod sessions;
+pub mod settings;
+pub mod unsubscribes;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
