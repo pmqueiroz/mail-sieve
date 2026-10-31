@@ -31,8 +31,8 @@
 {:else if !session.status.authenticated}
   <Login configured={session.status.configured} />
 {:else}
-  <div class="min-h-screen bg-page p-0 text-ink wide:p-12">
-    <div class="relative flex min-h-screen flex-col bg-surface shadow-edge wide:min-h-[calc(100vh-var(--spacing)*24)] wide:flex-row wide:rounded-card">
+  <div class="min-h-screen bg-surface text-ink">
+    <div class="relative flex min-h-screen flex-col wide:flex-row">
       <div class="hidden wide:contents"><NavRail /></div>
       <div class="flex min-w-0 flex-1 flex-col">
         <TopBar />

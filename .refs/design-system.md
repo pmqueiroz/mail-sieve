@@ -65,6 +65,10 @@ One concept, one component (`web/src/lib/components`):
 
 ## Deliberate deviations from the mock
 
+- No outer frame: the mock presents the app as a rounded card inset 24px
+  on a lavender canvas. That is design-file presentation, so the app fills
+  the window and the rail is full height. `page` stays a token for Login.
+
 - Overview says "messages in your mailbox" and "% of your mail": the index
   covers every synced folder, not only the inbox.
 - On narrow screens the "Biggest piles" rows use three columns; the mock's

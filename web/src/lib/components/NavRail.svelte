@@ -19,7 +19,7 @@
   </a>
 {/snippet}
 
-<aside class="sticky top-0 flex h-[calc(100vh-var(--spacing)*24)] w-42 flex-none flex-col items-center gap-3 self-start border-r border-line py-12">
+<aside class="sticky top-0 flex h-screen w-42 flex-none flex-col items-center gap-3 self-start border-r border-line py-12">
   <div class="mb-14 grid size-18 place-items-center rounded-md bg-btn text-btn-ink"><Icon name="logo" size={20} /></div>
   {#each routes as entry (entry.route)}
     {@render item(entry.route, entry.label)}
