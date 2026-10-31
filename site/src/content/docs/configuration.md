@@ -19,7 +19,7 @@ order: 1
 | `RUST_LOG` | Log filter. Default `info` |
 
 :::note
-If you expose mail-sieve beyond localhost, put it behind a TLS reverse proxy (Caddy, Traefik, nginx). Live progress uses server-sent events, so disable response buffering for `/api/events`.
+If you expose :mailsieve beyond localhost, put it behind a TLS reverse proxy (Caddy, Traefik, nginx). Live progress uses server-sent events, so disable response buffering for `/api/events`.
 :::
 
 ## Command line

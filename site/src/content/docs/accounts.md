@@ -19,7 +19,7 @@ The first sync downloads headers only, newest first, so you can start browsing s
 
 ## Gmail
 
-Either create an [app password](https://myaccount.google.com/apppasswords) (it requires 2-step verification) and pick the Gmail preset, or set up Google sign-in. mail-sieve indexes `[Gmail]/All Mail` with its labels, so every message is counted once.
+Either create an [app password](https://myaccount.google.com/apppasswords) (it requires 2-step verification) and pick the Gmail preset, or set up Google sign-in. :mailsieve indexes `[Gmail]/All Mail` with its labels, so every message is counted once.
 
 ## Outlook / Microsoft 365
 
@@ -35,5 +35,5 @@ Register an OAuth app with the provider and set its redirect URI to `<public url
 | Microsoft | `openid email offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send` |
 
 :::note
-SMTP is only used to send unsubscribe emails to senders that ask for one by mailto. mail-sieve never sends anything else.
+SMTP is only used to send unsubscribe emails to senders that ask for one by mailto. :mailsieve never sends anything else.
 :::
