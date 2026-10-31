@@ -11,6 +11,7 @@
   import PinButton from '../lib/components/PinButton.svelte';
   import PinnedConfirm from '../lib/components/PinnedConfirm.svelte';
   import QueryBar from '../lib/components/QueryBar.svelte';
+  import PluginSlot from '../lib/plugins/PluginSlot.svelte';
   import VirtualList from '../lib/components/VirtualList.svelte';
   import { formatBytes, formatNumber, formatShortDate } from '../lib/format';
   import { pinDescription } from '../lib/pins';
@@ -174,6 +175,7 @@
     <QueryBar {accountId} bind:value={query} bind:totals showCount={false} placeholder="Search messages">
       {#snippet trailing()}<span class="whitespace-nowrap text-xs text-ink3">Newest first</span>{/snippet}
     </QueryBar>
+    <PluginSlot name="search" context={{ accountId, query, setQuery: (next: string) => (query = next) }} />
     {#if allLoaded}
       <div class="flex flex-wrap items-center gap-6 rounded-lg bg-chip px-7 py-5 text-sm">
         {#if allMatching}

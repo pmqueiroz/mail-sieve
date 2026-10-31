@@ -75,7 +75,7 @@
     </div>
   </div>
   <ConnectDialog />
-  <PluginSlot name="overlay" />
+  <PluginSlot name="overlay" context={{}} />
 {/if}
 
 <Toasts />

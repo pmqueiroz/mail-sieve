@@ -9,6 +9,7 @@
   import Segmented from '../lib/components/Segmented.svelte';
   import TextInput from '../lib/components/TextInput.svelte';
   import { liveTotals } from '../lib/count.svelte';
+  import PluginSlot from '../lib/plugins/PluginSlot.svelte';
   import { describeRule, describeSchedule } from '../lib/describe';
   import { skippedNote } from '../lib/pins';
   import { actionSentence, formatNumber, formatWhen } from '../lib/format';
@@ -196,6 +197,8 @@
   </div>
   <input bind:this={fileInput} type="file" accept=".yaml,.yml,application/yaml,text/yaml" class="hidden" onchange={previewImport} />
 </div>
+
+<PluginSlot name="rules" context={{ accountId, rules: accountRules, reload: load }} />
 
 {#if accountRules.length === 0}
   <div class="py-24 text-center text-ink2">No rules yet. A rule archives or tidies matching mail after every sync, so the inbox stays clean on its own.</div>

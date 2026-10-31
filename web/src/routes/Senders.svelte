@@ -10,6 +10,7 @@
   import Pill from '../lib/components/Pill.svelte';
   import PinButton from '../lib/components/PinButton.svelte';
   import PinnedConfirm from '../lib/components/PinnedConfirm.svelte';
+  import PluginSlot from '../lib/plugins/PluginSlot.svelte';
   import QueryBar from '../lib/components/QueryBar.svelte';
   import Segmented from '../lib/components/Segmented.svelte';
   import UnsubscribeDialog from '../lib/components/UnsubscribeDialog.svelte';
@@ -162,6 +163,7 @@
 
 <div class="flex flex-col gap-7 pt-2">
   <QueryBar {accountId} bind:value={filter} large placeholder="Search senders, or try older_than:1y is:unread" />
+  <PluginSlot name="search" context={{ accountId, query: filter, setQuery: (next: string) => (filter = next) }} />
   <div class="flex flex-wrap items-center gap-4">
     {#each CHIPS as [label, term] (term)}
       <Chip active={hasTerm(filter, term)} surface onclick={() => (filter = toggleTerm(filter, term))}>{label}</Chip>

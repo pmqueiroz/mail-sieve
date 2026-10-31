@@ -6,6 +6,7 @@
   import Pill from '../lib/components/Pill.svelte';
   import ProgressBar from '../lib/components/ProgressBar.svelte';
   import Segmented from '../lib/components/Segmented.svelte';
+  import PluginSlot from '../lib/plugins/PluginSlot.svelte';
   import { formatBytes, formatNumber, formatShortDate, percent } from '../lib/format';
   import { router } from '../lib/router.svelte';
   import { session } from '../lib/session.svelte';
@@ -124,6 +125,8 @@
     </div>
   {/each}
 </section>
+
+<PluginSlot name="overview" context={{ accountId }} />
 
 <section class="grid grid-cols-[minmax(0,1fr)] board:grid-cols-[minmax(0,1fr)_--spacing(190)]">
   <div class="min-w-0 pt-14 pr-14 pb-4 board:border-r board:border-line">

@@ -2,7 +2,7 @@ import { CORE_PLUGINS } from '../../plugins';
 import { api, errorMessage } from '../api';
 import type { CommunityPluginManifest, PluginList } from '../types';
 import { host } from './host.svelte';
-import type { Cleanup, PluginDefinition, PluginEntry, SlotContent, SlotName } from './types';
+import type { Cleanup, Content, PluginDefinition, PluginEntry, SlotName, SlotProps } from './types';
 
 function isDefinition(value: unknown): value is PluginDefinition {
   if (!value || typeof value !== 'object') return false;
@@ -58,9 +58,9 @@ class Plugins {
     this.loaded = true;
   }
 
-  slot(name: SlotName): { id: string; content: SlotContent }[] {
+  slot<K extends SlotName>(name: K): { id: string; content: Content<SlotProps<K>> }[] {
     return this.active.flatMap((entry) => {
-      const content = entry.definition?.slots?.[name];
+      const content = entry.definition?.slots?.[name] as Content<SlotProps<K>> | undefined;
       return content ? [{ id: entry.id, content }] : [];
     });
   }

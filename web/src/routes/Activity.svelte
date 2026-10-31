@@ -4,6 +4,7 @@
   import Pill, { type PillTone } from '../lib/components/Pill.svelte';
   import ProgressBar, { type ProgressTone } from '../lib/components/ProgressBar.svelte';
   import { formatDuration, formatNumber, percent } from '../lib/format';
+  import PluginSlot from '../lib/plugins/PluginSlot.svelte';
   import { isUndoable, jobOrigin, jobTitle, undoJob } from '../lib/jobs';
   import { session } from '../lib/session.svelte';
   import { toasts } from '../lib/toasts.svelte';
@@ -71,6 +72,8 @@
     }
   }
 </script>
+
+<PluginSlot name="activity" context={{ accountId: session.accountId }} />
 
 {#if pending.length > 0}
   <div class="mt-2 mb-10 flex flex-col gap-6 rounded-3xl border border-line px-10 py-9">

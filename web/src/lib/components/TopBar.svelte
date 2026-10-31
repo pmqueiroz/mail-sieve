@@ -5,6 +5,7 @@
   import { runningSync, syncDot, syncStatus } from '../sync';
   import { toasts } from '../toasts.svelte';
   import { ui } from '../ui.svelte';
+  import PluginSlot from '../plugins/PluginSlot.svelte';
   import Avatar from './Avatar.svelte';
   import Button from './Button.svelte';
   import Chip from './Chip.svelte';
@@ -43,6 +44,7 @@
     </button>
     <span class="hidden wide:contents"><Button size="2xl" variant="primary" onclick={syncNow}>Sync now</Button></span>
   {/if}
+  <PluginSlot name="topbar" context={{}} />
   <div class="relative">
     <button type="button" class="flex items-center gap-4 border-0 bg-transparent p-0" aria-expanded={menu} onclick={() => (menu = !menu)}>
       <Avatar label={account?.label ?? '+'} seed={account?.id ?? 0} size="xl" round />

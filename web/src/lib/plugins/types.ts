@@ -1,7 +1,17 @@
 import type { Component } from 'svelte';
+import type { Rule } from '../types';
 import type { PluginHost } from './host.svelte';
 
-export type SlotName = 'overlay';
+export interface SlotContexts {
+  overlay: object;
+  topbar: object;
+  overview: { accountId: number };
+  rules: { accountId: number; rules: Rule[]; reload: () => void };
+  search: { accountId: number; query: string; setQuery: (query: string) => void };
+  activity: { accountId: number | null };
+}
+
+export type SlotName = keyof SlotContexts;
 
 export type Cleanup = void | (() => void);
 
@@ -9,13 +19,15 @@ export interface ContentContext {
   close: () => void;
 }
 
-export type MountFn = (target: HTMLElement, host: PluginHost, context: ContentContext) => Cleanup;
+export type SlotProps<K extends SlotName> = ContentContext & SlotContexts[K];
 
-export type SlotContent = Component | Component<ContentContext> | { mount: MountFn };
+export type MountFn<P extends ContentContext = ContentContext> = (target: HTMLElement, host: PluginHost, context: P) => Cleanup;
+
+export type Content<P extends ContentContext = ContentContext> = Component | Component<P> | { mount: MountFn<P> };
 
 export interface PluginDefinition {
-  slots?: Partial<Record<SlotName, SlotContent>>;
-  configure?: SlotContent;
+  slots?: { [K in SlotName]?: Content<SlotProps<K>> };
+  configure?: Content;
   setup?: (host: PluginHost) => Cleanup;
 }
 
