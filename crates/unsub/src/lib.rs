@@ -1,10 +1,12 @@
+mod guard;
 mod mailto;
 mod one_click;
 
 use std::time::Duration;
 
+pub use guard::{is_public_address, validate_public_url};
 pub use mailto::{Mailto, SmtpAuth, SmtpSettings, parse_mailto, send_mailto};
-pub use one_click::{is_public_address, post_one_click, validate_one_click_url};
+pub use one_click::post_one_click;
 
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
 
