@@ -19,7 +19,10 @@ impl Action {
     }
 
     pub fn removes_from_source(&self) -> bool {
-        matches!(self, Action::Archive | Action::Trash | Action::Delete | Action::Move(_))
+        matches!(
+            self,
+            Action::Archive | Action::Trash | Action::Delete | Action::Move(_)
+        )
     }
 }
 

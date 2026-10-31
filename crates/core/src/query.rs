@@ -118,20 +118,34 @@ fn tokenize(input: &str) -> Result<Vec<Token>, QueryError> {
         if field.is_none() && value.is_empty() {
             continue;
         }
-        tokens.push(Token { negated, field, value });
+        tokens.push(Token {
+            negated,
+            field,
+            value,
+        });
     }
     Ok(tokens)
 }
 
 fn parse_token(token: Token) -> Result<Term, QueryError> {
-    let Token { negated, field, value } = token;
+    let Token {
+        negated,
+        field,
+        value,
+    } = token;
     let Some(field) = field else {
-        return Ok(Term { negated, kind: TermKind::Text(value) });
+        return Ok(Term {
+            negated,
+            kind: TermKind::Text(value),
+        });
     };
     if value.is_empty() {
         return Err(QueryError::EmptyValue(field));
     }
-    let invalid = || QueryError::InvalidValue { field: field.clone(), value: value.clone() };
+    let invalid = || QueryError::InvalidValue {
+        field: field.clone(),
+        value: value.clone(),
+    };
     let kind = match field.as_str() {
         "from" => TermKind::From(value.to_lowercase()),
         "domain" => TermKind::Domain(value.to_lowercase()),
@@ -140,7 +154,12 @@ fn parse_token(token: Token) -> Result<Term, QueryError> {
         "in" | "mailbox" => TermKind::Mailbox(value),
         "is" => match value.to_ascii_lowercase().as_str() {
             "unread" => TermKind::Unread,
-            "read" => return Ok(Term { negated: !negated, kind: TermKind::Unread }),
+            "read" => {
+                return Ok(Term {
+                    negated: !negated,
+                    kind: TermKind::Unread,
+                });
+            }
             "flagged" | "starred" => TermKind::Flagged,
             "answered" | "replied" => TermKind::Answered,
             _ => return Err(invalid()),
@@ -181,7 +200,9 @@ pub fn parse_duration(value: &str) -> Option<i64> {
 
 pub fn parse_size(value: &str) -> Option<u64> {
     let value = value.trim().to_ascii_lowercase();
-    let split = value.find(|c: char| !c.is_ascii_digit() && c != '.').unwrap_or(value.len());
+    let split = value
+        .find(|c: char| !c.is_ascii_digit() && c != '.')
+        .unwrap_or(value.len());
     let (amount, unit) = value.split_at(split);
     let amount: f64 = amount.parse().ok()?;
     let multiplier = match unit {
@@ -220,7 +241,12 @@ mod tests {
     use super::*;
 
     fn kinds(input: &str) -> Vec<(bool, TermKind)> {
-        Query::parse(input).unwrap().terms.into_iter().map(|t| (t.negated, t.kind)).collect()
+        Query::parse(input)
+            .unwrap()
+            .terms
+            .into_iter()
+            .map(|t| (t.negated, t.kind))
+            .collect()
     }
 
     #[test]
@@ -238,9 +264,18 @@ mod tests {
 
     #[test]
     fn parses_units() {
-        assert_eq!(kinds("older_than:1y"), vec![(false, TermKind::OlderThan(365 * DAY))]);
-        assert_eq!(kinds("larger:5mb"), vec![(false, TermKind::Larger(5 * 1024 * 1024))]);
-        assert_eq!(kinds("-has:unsubscribe"), vec![(true, TermKind::HasUnsubscribe)]);
+        assert_eq!(
+            kinds("older_than:1y"),
+            vec![(false, TermKind::OlderThan(365 * DAY))]
+        );
+        assert_eq!(
+            kinds("larger:5mb"),
+            vec![(false, TermKind::Larger(5 * 1024 * 1024))]
+        );
+        assert_eq!(
+            kinds("-has:unsubscribe"),
+            vec![(true, TermKind::HasUnsubscribe)]
+        );
     }
 
     #[test]
@@ -252,10 +287,22 @@ mod tests {
 
     #[test]
     fn reports_errors() {
-        assert_eq!(Query::parse("foo:bar"), Err(QueryError::UnknownField("foo".into())));
-        assert_eq!(Query::parse("from:"), Err(QueryError::EmptyValue("from".into())));
-        assert_eq!(Query::parse("subject:\"open"), Err(QueryError::UnterminatedQuote));
-        assert!(matches!(Query::parse("older_than:abc"), Err(QueryError::InvalidValue { .. })));
+        assert_eq!(
+            Query::parse("foo:bar"),
+            Err(QueryError::UnknownField("foo".into()))
+        );
+        assert_eq!(
+            Query::parse("from:"),
+            Err(QueryError::EmptyValue("from".into()))
+        );
+        assert_eq!(
+            Query::parse("subject:\"open"),
+            Err(QueryError::UnterminatedQuote)
+        );
+        assert!(matches!(
+            Query::parse("older_than:abc"),
+            Err(QueryError::InvalidValue { .. })
+        ));
     }
 
     #[test]

@@ -36,13 +36,13 @@ impl Flags {
     }
 
     pub fn from_imap_flags<'a>(names: impl IntoIterator<Item = &'a str>) -> Flags {
-        names
-            .into_iter()
-            .filter_map(Self::from_imap_flag)
-            .fold(Flags::default(), |mut acc, flag| {
+        names.into_iter().filter_map(Self::from_imap_flag).fold(
+            Flags::default(),
+            |mut acc, flag| {
                 acc.insert(flag);
                 acc
-            })
+            },
+        )
     }
 }
 

@@ -24,7 +24,9 @@ impl UidSet {
         if start == 0 || end < start {
             return Self::default();
         }
-        Self { ranges: vec![(start, end)] }
+        Self {
+            ranges: vec![(start, end)],
+        }
     }
 
     pub fn is_empty(&self) -> bool {
@@ -32,7 +34,10 @@ impl UidSet {
     }
 
     pub fn len(&self) -> usize {
-        self.ranges.iter().map(|(start, end)| (end - start + 1) as usize).sum()
+        self.ranges
+            .iter()
+            .map(|(start, end)| (end - start + 1) as usize)
+            .sum()
     }
 
     pub fn ranges(&self) -> &[(u32, u32)] {
@@ -52,7 +57,9 @@ impl UidSet {
                 current.push((cursor, take_end));
                 current_len += take_end - cursor + 1;
                 if current_len == max_uids {
-                    chunks.push(UidSet { ranges: std::mem::take(&mut current) });
+                    chunks.push(UidSet {
+                        ranges: std::mem::take(&mut current),
+                    });
                     current_len = 0;
                 }
                 if take_end == u32::MAX {
@@ -74,7 +81,9 @@ impl UidSet {
         for &range in &self.ranges {
             let encoded = encoded_range_len(range) + usize::from(!current.is_empty());
             if !current.is_empty() && current_bytes + encoded > max_bytes {
-                chunks.push(UidSet { ranges: std::mem::take(&mut current) });
+                chunks.push(UidSet {
+                    ranges: std::mem::take(&mut current),
+                });
                 current_bytes = 0;
             }
             current_bytes += encoded_range_len(range) + usize::from(!current.is_empty());
@@ -139,7 +148,11 @@ mod tests {
     #[test]
     fn chunks_by_count_splits_inside_ranges() {
         let set = UidSet::from_uids((1..=10).chain([20, 21]));
-        let chunks: Vec<String> = set.chunks_by_count(4).iter().map(ToString::to_string).collect();
+        let chunks: Vec<String> = set
+            .chunks_by_count(4)
+            .iter()
+            .map(ToString::to_string)
+            .collect();
         assert_eq!(chunks, ["1:4", "5:8", "9:10,20:21"]);
     }
 
@@ -156,6 +169,9 @@ mod tests {
     #[test]
     fn iter_round_trips() {
         let uids = vec![1, 2, 3, 7, 8, 100];
-        assert_eq!(UidSet::from_uids(uids.clone()).iter().collect::<Vec<_>>(), uids);
+        assert_eq!(
+            UidSet::from_uids(uids.clone()).iter().collect::<Vec<_>>(),
+            uids
+        );
     }
 }
