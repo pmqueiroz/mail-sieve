@@ -43,8 +43,8 @@ docker build -t mail-sieve .
   target (GitHub Pages or other) is not decided, so no deploy job exists.
 
 - Publishing images (GHCR) and release binaries. Deliberately deferred
-  until the first tagged release and a decided license; publishing earlier
-  would ship an artifact with no versioning promise.
+  until the first tagged release (the license is MIT, see `LICENSE`);
+  publishing earlier would ship an artifact with no versioning promise.
 - Multi-arch images (arm64 for NAS boxes). The Dockerfile is portable; it
   needs `docker/setup-qemu-action` and `platforms` once publishing exists.
 - Real-provider tests (Gmail, Outlook) need secrets and accounts and are
