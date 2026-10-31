@@ -1,0 +1,14 @@
+services:
+  mail-sieve:
+    build: ..
+    image: mail-sieve:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - mail-sieve-data:/data
+    environment:
+      MAIL_SIEVE_PUBLIC_URL: "http://localhost:8080"
+
+volumes:
+  mail-sieve-data:
