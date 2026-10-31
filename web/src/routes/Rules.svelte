@@ -10,10 +10,11 @@
   import TextInput from '../lib/components/TextInput.svelte';
   import { liveTotals } from '../lib/count.svelte';
   import { describeRule, describeSchedule } from '../lib/describe';
+  import { skippedNote } from '../lib/pins';
   import { actionSentence, formatNumber, formatWhen } from '../lib/format';
   import { session } from '../lib/session.svelte';
   import { toasts } from '../lib/toasts.svelte';
-  import type { Mailbox, Rule, RuleConflict, RuleImportReport } from '../lib/types';
+  import type { ActionResponse, Mailbox, Rule, RuleConflict, RuleImportReport } from '../lib/types';
 
   type Schedule = 'after_sync' | 'interval' | 'manual';
   type Draft = { id: number | null; name: string; query: string; action: string; enabled: boolean; schedule: Schedule; interval: number };
@@ -125,8 +126,8 @@
 
   async function runNow(rule: Rule) {
     try {
-      const { job_id } = await api.post<{ job_id: number | null }>(`/rules/${rule.id}/run`);
-      if (job_id === null) toasts.show('No messages matched.');
+      const { job_id, skipped_pinned } = await api.post<ActionResponse>(`/rules/${rule.id}/run`);
+      if (job_id === null) toasts.show(skipped_pinned > 0 ? 'Nothing to do. Every matching message is from a pinned sender.' : 'No messages matched.');
       else toasts.track({ jobId: job_id, action: rule.action, count: null, who: `rule ${rule.name}`, undoable: true });
       await load();
     } catch (error) {
@@ -225,7 +226,7 @@
   <Field label="Search">
     <TextInput mono spellcheck={false} bind:value={draft.query} placeholder="has:list older_than:30d" />
     {#snippet hint()}
-      {#if live.error}<span class="text-bad">{live.error}</span>{:else}Matches <b class="text-ink">{formatNumber(live.totals?.count ?? 0)}</b> messages right now{/if}
+      {#if live.error}<span class="text-bad">{live.error}</span>{:else}Matches <b class="text-ink">{formatNumber(live.totals?.count ?? 0)}</b> messages right now{#if live.totals?.pinned}, {skippedNote(live.totals.pinned)}{/if}{/if}
     {/snippet}
   </Field>
   <div class="flex flex-col gap-3 text-sm font-semibold">
