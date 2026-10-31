@@ -44,7 +44,7 @@ Cargo workspace producing one binary, plus a Svelte SPA embedded into it.
 - `crates/core`: pure domain, no I/O. `UidSet`, `Flags`, `MessageMeta`,
   `Action`, the query DSL (`Query::parse`), header parsers
   (`headers::parse_list_unsubscribe`, `parse_list_id`), label
-  normalization.
+  normalization, domain blocklist parsing (`blocklist`).
 - `crates/store`: SQLite. Schema in `schema.sql`, migrations by
   `PRAGMA user_version`, one writer connection plus a pool of read-only
   connections. Modules per table; `search.rs` compiles the query AST to
@@ -53,12 +53,15 @@ Cargo workspace producing one binary, plus a Svelte SPA embedded into it.
   roots). `connect`, `list_folders`, `fetch_headers`,
   `fetch_headers_parallel`, `fetch_flags`, `fetch_raw`, `apply(Operation)`.
   Knows nothing about the store.
-- `crates/unsub`: unsubscribe execution (RFC 8058 one-click POST, mailto
+- `crates/unsub`: the public-address guard (`guard.rs`), guarded text
+  fetch for blocklists (`fetch.rs`) and unsubscribe execution (RFC 8058
+  one-click POST, mailto
   over SMTP, link fallback).
 - `crates/server` (binary `mail-sieve`): config, credential vault, account
   service, sync and action engines, job runner, rules, scheduler, IDLE
   watchers, OAuth, plugin state, config and community plugin files, AI
-  provider connection test (`ai.rs`), axum API,
+  provider model list and completions (`ai.rs`), blocklist preview, axum
+  API,
   embedded assets, CLI.
 - `web/`: Svelte 5 + Vite + TypeScript SPA, built to `web/dist` and embedded
   with `rust-embed`. `build.rs` writes a placeholder `index.html` when the
@@ -273,6 +276,9 @@ to `completed`. The URLs are http(s) only because the header parser drops
 every other scheme, so the UI can render them as links. An optional
 follow-up action (archive or trash, never delete) is enqueued for
 `from:<sender>`. See [security.md](./security.md) for the SSRF guard.
+`GET .../unsubscribes/still-sending` reports `completed` senders that kept
+mailing more than two days later; the unsubscribe audit plugin shows it
+(see [plugins.md](./plugins.md)).
 
 ## Web UI
 
@@ -293,9 +299,10 @@ follow-up action (archive or trash, never delete) is enqueued for
 - Overview reads `/overview` plus the top five sender groups. Inbox mix
   petals link to `category:` searches.
 - Styling, tokens and components: see [design-system.md](./design-system.md).
-- Plugins: `lib/plugins/` is the host (registry, slots, host API) and
-  `src/plugins/` holds the core plugins, the first being the ghoul
-  wingman. See [plugins.md](./plugins.md).
+- Plugins: `lib/plugins/` is the host (registry, slots, host API, shared
+  AI settings) and `src/plugins/` holds the core plugins (wingman, undo
+  history, digest, rule recipes, query builder, unsubscribe audit, AI
+  categorizer, blocklists). See [plugins.md](./plugins.md).
 - Message previews render `text/plain` (or text extracted from HTML) inside
   a `<pre>`; HTML is never injected.
 

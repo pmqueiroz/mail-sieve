@@ -50,7 +50,7 @@ bulk. These are the decisions that protect that, and the reasons.
 ## Unsubscribe SSRF guard
 
 `List-Unsubscribe` URLs are attacker-controlled. Before the server POSTs
-(`unsub/src/one_click.rs`):
+(`unsub/src/one_click.rs`, guard in `unsub/src/guard.rs`):
 
 - https only, no userinfo, host must be a domain name with a dot (no IP
   literals, no `localhost`);
@@ -62,6 +62,12 @@ bulk. These are the decisions that protect that, and the reasons.
 
 Plain links that fail these checks are handed to the user's browser, not
 fetched by the server.
+
+The same guard covers blocklist downloads (`unsub::fetch_public_text`,
+used by `POST /api/accounts/{id}/blocklists/preview`): https only, public
+addresses only, pinned resolution, no redirects, a 20 s timeout and an
+8 MB cap enforced while streaming (and up front from `Content-Length`).
+Only the parsed domain matches go back to the browser, never the file.
 
 ## Web surface
 
@@ -95,11 +101,21 @@ fetched by the server.
   ranges. It is behind the session, only issues a GET, rejects non-http(s)
   schemes and URLs with credentials, times out after 10 s, and returns
   only parsed model ids or a short error, never the raw body.
+- `POST /api/ai/complete` has the same trust model and URL rules (POST,
+  90 s timeout, prompt capped at 100 KB, `max_tokens` clamped to 4096)
+  and returns only the completion text. It can use a plugin's stored key,
+  so a script with a session could send that key to another base URL;
+  that is no new exposure, since such a script can already act on every
+  mailbox. Plugins send headers only (sender names, addresses, counts,
+  dates and, for the categorizer, a few subjects), never bodies, and the
+  forms say so before anything is sent.
 - The CSP is unchanged: modules come from `'self'`, so no inline script or
   remote origin is needed.
 - Plugins act through the public API, so every destructive-operation guard
   above (confirm, pins, rule validation) applies to them as well. The
-  wingman only trashes, starts syncs and creates archive rules.
+  wingman only trashes, marks read, starts syncs and creates archive
+  rules; model answers are reduced to that allowlist before anything is
+  shown. No core plugin deletes permanently.
 
 ## Transport
 

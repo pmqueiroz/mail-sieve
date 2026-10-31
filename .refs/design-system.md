@@ -80,7 +80,16 @@ One concept, one component (`web/src/lib/components`):
   `skipped` count and appends "N from pinned senders are skipped".
 - Plugins: `PluginSlot` / `MountSlot` (`lib/plugins/`) render plugin
   content; the wingman's `Ghoul` and `Balloon` live with the plugin in
-  `src/plugins/wingman/` because nothing else uses them. The Plugins page
+  `src/plugins/wingman/` because nothing else uses them.
+  `AiSettingsForm` (`lib/plugins/ai/`) is the one AI provider form; any
+  plugin that needs a model reuses it and adds its own fields through
+  the `extra` snippet. Plugin sections on Overview follow the stat row
+  pattern (`section` with `border-b border-line py-12`, an `lg` heading
+  and a muted note); plugin cards on Rules and Activity reuse the
+  `rounded-3xl border border-line` card, with a dashed border for
+  suggestions that do not exist yet (rule recipes). The query builder's
+  term chips match `Chip` height (`h-17`) and turn `bad` with a struck
+  value when negated. The Plugins page
   has Core and Community sections, each a card grid like Accounts with a
   `Checkbox` per plugin and a Configure `Button`; an empty section is an
   `EmptyState` inside a dashed card. Configure opens the shared `Modal`
