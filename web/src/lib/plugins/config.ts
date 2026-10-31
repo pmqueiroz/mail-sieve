@@ -27,3 +27,29 @@ export async function listModels(query: ModelQuery): Promise<string[]> {
   });
   return models;
 }
+
+export interface CompletionTarget {
+  kind: AiProviderKind;
+  baseUrl: string;
+  model: string;
+  plugin?: string;
+}
+
+export interface CompletionQuery extends CompletionTarget {
+  system?: string;
+  prompt: string;
+  maxTokens?: number;
+}
+
+export async function complete(query: CompletionQuery): Promise<string> {
+  const { text } = await api.post<{ text: string }>('/ai/complete', {
+    kind: query.kind,
+    base_url: query.baseUrl,
+    model: query.model,
+    plugin: query.plugin ?? null,
+    system: query.system ?? '',
+    prompt: query.prompt,
+    max_tokens: query.maxTokens ?? null,
+  });
+  return text;
+}

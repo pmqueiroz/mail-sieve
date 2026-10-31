@@ -3,7 +3,7 @@ import { api } from '../api';
 import { type Route, router } from '../router.svelte';
 import { session } from '../session.svelte';
 import { toasts } from '../toasts.svelte';
-import { listModels, loadPluginConfig, savePluginConfig } from './config';
+import { complete, listModels, loadPluginConfig, savePluginConfig } from './config';
 import type { Account, Job } from '../types';
 
 export const HOST_API_VERSION = 1;
@@ -24,7 +24,7 @@ export const host = {
   api,
   runAction,
   config: { load: loadPluginConfig, save: savePluginConfig },
-  ai: { listModels },
+  ai: { listModels, complete },
   toast: (message: string, kind: 'info' | 'success' | 'error' = 'info') => toasts.show(message, kind),
   go: (route: Route, params: Record<string, string> = {}) => router.go(route, params),
   get route(): Route {
