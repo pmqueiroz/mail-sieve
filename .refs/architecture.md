@@ -61,6 +61,9 @@ Cargo workspace producing one binary, plus a Svelte SPA embedded into it.
 - `web/`: Svelte 5 + Vite + TypeScript SPA, built to `web/dist` and embedded
   with `rust-embed`. `build.rs` writes a placeholder `index.html` when the
   UI was not built, so `cargo build` always works.
+  `web/public/` holds the favicon set (SVG, PNG fallbacks, apple-touch
+  icon, `site.webmanifest`), the same files as the site's
+  `site/public/`.
 - `docker/`: Dovecot config and compose files for tests and deployment.
 
 Dependency direction: `server -> {store, imap, unsub} -> core`. `store` and

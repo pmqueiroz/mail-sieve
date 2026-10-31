@@ -58,7 +58,11 @@ fades back to "thousands". It plays once per page view.
 Graph and Twitter card, theme color, favicon, sitemap link and JSON-LD.
 Home emits `SoftwareApplication` + `WebSite`; each doc emits `TechArticle` +
 `BreadcrumbList`. `@astrojs/sitemap` writes `sitemap-index.xml`;
-`pages/robots.txt.ts` points to it. `public/og.png` is a 1200x630 card
+`pages/robots.txt.ts` points to it. Icons: `favicon.svg` first, then
+PNG fallbacks (48, 32, 16), `apple-touch-icon.png` (180) and
+`site.webmanifest` listing the 192 and 512 PNGs. The app ships the same set
+in `web/public/` (see [architecture.md](./architecture.md)); keep them in
+sync when the mark changes. `public/og.png` is a 1200x630 card
 with the logo, the hero headline and a sample top-senders table (the repo
 banner is 1280x320 and crops badly in link previews). Each doc's
 frontmatter `description` is its meta description, `lead` is the visible
