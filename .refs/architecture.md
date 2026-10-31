@@ -86,7 +86,14 @@ See `crates/store/src/schema.sql`. Highlights:
   (`inbox\u{1f}receipts`).
 - `jobs` + `job_targets` freeze the exact `(mailbox_id, uid)` selection at
   enqueue time, so the action that runs is the one previewed, and a job
-  resumes after a crash with whatever targets are left.
+  resumes after a crash with whatever targets are left. `job_targets` rows
+  are deleted as they complete, so for every undoable action (all but
+  `delete`) `job_undo` keeps a copy of the selection plus each message's
+  `Message-ID`, taken before anything moves. Moved messages get new UIDs in
+  the destination folder; the Message-ID is how undo finds them again.
+- `action_log.bytes` records the size of messages an action removed from
+  their folder (archive, trash, delete, move), which feeds the Overview
+  "freed this week" figure. Flag changes log 0 bytes.
 - UIDVALIDITY change: every row of that mailbox is deleted and re-synced.
   Never reconcile across UIDVALIDITY.
 

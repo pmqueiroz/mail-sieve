@@ -18,6 +18,20 @@ impl Action {
         matches!(self, Action::Delete)
     }
 
+    pub fn is_undoable(&self) -> bool {
+        !self.is_destructive()
+    }
+
+    pub fn inverse_flag_action(&self) -> Option<Action> {
+        match self {
+            Action::MarkRead => Some(Action::MarkUnread),
+            Action::MarkUnread => Some(Action::MarkRead),
+            Action::Flag => Some(Action::Unflag),
+            Action::Unflag => Some(Action::Flag),
+            _ => None,
+        }
+    }
+
     pub fn removes_from_source(&self) -> bool {
         matches!(
             self,

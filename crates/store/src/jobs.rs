@@ -72,6 +72,40 @@ pub fn add_targets(conn: &Connection, job_id: i64, targets: &[Target]) -> Result
     Ok(())
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UndoTarget {
+    pub mailbox_id: i64,
+    pub uid: u32,
+    pub message_id: Option<String>,
+}
+
+pub fn record_undo(conn: &Connection, job_id: i64) -> Result<()> {
+    conn.execute(
+        "INSERT OR IGNORE INTO job_undo (job_id, mailbox_id, uid, message_id) \
+         SELECT t.job_id, t.mailbox_id, t.uid, m.message_id FROM job_targets t \
+         LEFT JOIN messages m ON m.mailbox_id = t.mailbox_id AND m.uid = t.uid \
+         WHERE t.job_id = ?1",
+        [job_id],
+    )?;
+    Ok(())
+}
+
+pub fn undo_targets(conn: &Connection, job_id: i64) -> Result<Vec<UndoTarget>> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT mailbox_id, uid, message_id FROM job_undo WHERE job_id = ?1 ORDER BY mailbox_id, uid",
+    )?;
+    let rows = stmt
+        .query_map([job_id], |row| {
+            Ok(UndoTarget {
+                mailbox_id: row.get(0)?,
+                uid: row.get(1)?,
+                message_id: row.get(2)?,
+            })
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(rows)
+}
+
 pub fn remaining_targets(conn: &Connection, job_id: i64) -> Result<Vec<Target>> {
     let mut stmt = conn.prepare_cached(
         "SELECT mailbox_id, uid FROM job_targets WHERE job_id = ?1 ORDER BY mailbox_id, uid",
@@ -208,12 +242,13 @@ pub struct ActionLogEntry<'a> {
     pub mailbox: &'a str,
     pub uids: &'a str,
     pub count: usize,
+    pub bytes: u64,
 }
 
 pub fn log_action(conn: &Connection, entry: &ActionLogEntry<'_>) -> Result<()> {
     conn.execute(
-        "INSERT INTO action_log (job_id, account_id, action, mailbox, uids, count, at) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT INTO action_log (job_id, account_id, action, mailbox, uids, count, bytes, at) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
             entry.job_id,
             entry.account_id,
@@ -221,6 +256,7 @@ pub fn log_action(conn: &Connection, entry: &ActionLogEntry<'_>) -> Result<()> {
             entry.mailbox,
             entry.uids,
             entry.count as i64,
+            entry.bytes as i64,
             now()
         ],
     )?;
@@ -258,6 +294,7 @@ mod tests {
                         },
                     ],
                 )?;
+                record_undo(tx, job)?;
                 complete_targets(tx, job, 1, &[1])?;
                 Ok(job)
             })
@@ -274,6 +311,8 @@ mod tests {
             }]
         );
         assert_eq!(job.payload["action"], "trash");
+        let undo = store.read(|conn| undo_targets(conn, job.id)).unwrap();
+        assert_eq!(undo.iter().map(|t| t.uid).collect::<Vec<_>>(), vec![1, 2]);
 
         store.write(|tx| mark_running(tx, job.id)).unwrap();
         assert_eq!(store.write(|tx| requeue_interrupted(tx)).unwrap(), 1);

@@ -136,6 +136,17 @@ pub fn delete_uids(conn: &Connection, mailbox_id: i64, uids: &[u32]) -> Result<u
     Ok(deleted)
 }
 
+pub fn total_size(conn: &Connection, mailbox_id: i64, uids: &[u32]) -> Result<u64> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT COALESCE(SUM(size), 0) FROM messages WHERE mailbox_id = ?1 AND uid = ?2",
+    )?;
+    let mut total = 0;
+    for uid in uids {
+        total += stmt.query_row(params![mailbox_id, uid], |row| row.get::<_, i64>(0))? as u64;
+    }
+    Ok(total)
+}
+
 pub fn local_uids(conn: &Connection, mailbox_id: i64) -> Result<Vec<u32>> {
     let mut stmt =
         conn.prepare_cached("SELECT uid FROM messages WHERE mailbox_id = ?1 ORDER BY uid")?;

@@ -17,7 +17,10 @@ pub use error::{Error, Result};
 pub use rusqlite::{Connection, Transaction};
 use rusqlite::{OpenFlags, TransactionBehavior};
 
-const MIGRATIONS: &[&str] = &[include_str!("schema.sql")];
+const MIGRATIONS: &[&str] = &[
+    include_str!("schema.sql"),
+    include_str!("migration_002.sql"),
+];
 const MAX_IDLE_READERS: usize = 8;
 
 #[derive(Clone)]

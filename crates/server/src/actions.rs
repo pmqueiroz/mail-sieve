@@ -38,6 +38,7 @@ pub async fn enqueue(
 ) -> Result<Option<i64>> {
     let now = mail_sieve_store::now();
     let payload = json!({ "action": action.to_string(), "origin": origin });
+    let undoable = action.is_undoable();
     let job_id = state
         .write(move |tx| {
             let targets = match &selection {
@@ -58,6 +59,9 @@ pub async fn enqueue(
             }
             let job_id = jobs::create(tx, Some(account_id), "action", &payload)?;
             jobs::add_targets(tx, job_id, &targets)?;
+            if undoable {
+                jobs::record_undo(tx, job_id)?;
+            }
             Ok(Some(job_id))
         })
         .await?;
@@ -248,6 +252,10 @@ pub async fn run(state: &AppState, job: &Job) -> Result<()> {
             let encoded = chunk.to_string();
             state
                 .write(move |tx| {
+                    let bytes = match &effect {
+                        LocalEffect::Remove => messages::total_size(tx, mailbox_id, &chunk_uids)?,
+                        _ => 0,
+                    };
                     match &effect {
                         LocalEffect::Remove => {
                             messages::delete_uids(tx, mailbox_id, &chunk_uids)?;
@@ -275,6 +283,7 @@ pub async fn run(state: &AppState, job: &Job) -> Result<()> {
                             mailbox: &mailbox_name,
                             uids: &encoded,
                             count: chunk_uids.len(),
+                            bytes,
                         },
                     )
                 })
