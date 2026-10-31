@@ -28,8 +28,9 @@ by default, so the output is plain files that any static host can serve.
   hundreds of KB) which would wreck load time. `src/assets/demo.png` is a
   2560x1600 capture of `Mail Sieve.dc.html` (Overview, dark) and is served as
   responsive AVIF with a WebP fallback via `astro:assets`. The caption says
-  "sample data" instead of the mock's "Click around". Re-capture it if the UI
-  changes noticeably.
+  "sample data" instead of the mock's "Click around" and is `sr-only`, read
+  by screen readers but not shown. Re-capture it if the UI changes
+  noticeably.
 - Lighthouse (mobile, simulated throttling) at the time of writing: 100 on
   performance, accessibility, best practices and SEO for home and docs.
   Keep it there: no client frameworks, no third-party scripts or fonts.
@@ -133,6 +134,10 @@ Deviations from the mock:
   (4.15:1 on the page, 3.8:1 on cards) for the small labels it is used on.
 - Header gap is 16px below `wide` (28px above): at 390px the mock's header
   overflows the viewport.
+- No eyebrow labels on section intros or feature cards, no tagline above the
+  hero headline, no license link in the footer, and the rule panel shows
+  only the rule's name, sentence and query. Body copy writes the name as the
+  wordmark (`mail<b>sieve</b>`), and titles use "mailsieve".
 
 ## Copy: what is real and what is placeholder
 
