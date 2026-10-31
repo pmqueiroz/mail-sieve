@@ -4,6 +4,8 @@ mod api;
 mod assets;
 mod auth;
 mod config;
+#[cfg(test)]
+mod e2e_tests;
 mod error;
 mod idle;
 mod jobs;
