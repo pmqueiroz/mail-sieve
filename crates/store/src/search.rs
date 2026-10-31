@@ -252,6 +252,33 @@ pub fn targets_for_ids(conn: &Connection, account_id: i64, ids: &[i64]) -> Resul
     Ok(targets)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Location {
+    pub account_id: i64,
+    pub mailbox: String,
+    pub uidvalidity: Option<u32>,
+    pub uid: u32,
+}
+
+pub fn locate(conn: &Connection, message_id: i64) -> Result<Location> {
+    use rusqlite::OptionalExtension;
+    conn.query_row(
+        "SELECT m.account_id, b.name, b.uidvalidity, m.uid FROM messages m \
+         JOIN mailboxes b ON b.id = m.mailbox_id WHERE m.id = ?1",
+        [message_id],
+        |row| {
+            Ok(Location {
+                account_id: row.get(0)?,
+                mailbox: row.get(1)?,
+                uidvalidity: row.get(2)?,
+                uid: row.get(3)?,
+            })
+        },
+    )
+    .optional()?
+    .ok_or(crate::Error::NotFound)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GroupBy {
@@ -540,6 +567,12 @@ mod tests {
             vec![2, 1, 5]
         );
         assert_eq!(second[2].mailbox, "Archive");
+        let location = store.read(|conn| locate(conn, second[2].id)).unwrap();
+        assert_eq!((location.mailbox.as_str(), location.uid), ("Archive", 5));
+        assert!(matches!(
+            store.read(|conn| locate(conn, 9999)),
+            Err(crate::Error::NotFound)
+        ));
     }
 
     fn group_keys(

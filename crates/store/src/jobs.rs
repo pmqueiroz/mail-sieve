@@ -281,6 +281,9 @@ mod tests {
         assert!(store.read(|conn| is_cancelled(conn, job.id)).unwrap());
         assert!(!store.write(|tx| cancel(tx, job.id)).unwrap());
         store.write(|tx| finish(tx, job.id, DONE, None)).unwrap();
-        assert_eq!(store.read(|conn| get(conn, job.id)).unwrap().state, CANCELLED);
+        assert_eq!(
+            store.read(|conn| get(conn, job.id)).unwrap().state,
+            CANCELLED
+        );
     }
 }
