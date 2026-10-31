@@ -1,9 +1,11 @@
+mod fetch;
 mod guard;
 mod mailto;
 mod one_click;
 
 use std::time::Duration;
 
+pub use fetch::fetch_public_text;
 pub use guard::{is_public_address, validate_public_url};
 pub use mailto::{Mailto, SmtpAuth, SmtpSettings, parse_mailto, send_mailto};
 pub use one_click::post_one_click;
@@ -56,6 +58,8 @@ pub enum Error {
     NoSmtp,
     #[error("smtp: {0}")]
     Smtp(String),
+    #[error("the response is larger than {0} bytes")]
+    TooLarge(usize),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
