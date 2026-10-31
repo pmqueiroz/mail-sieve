@@ -111,8 +111,6 @@
     </Balloon>
   {:else if wingman.phase === 'ack'}
     <Balloon class="w-max max-w-150 px-9 py-7 text-pretty leading-row">{wingman.message}</Balloon>
-  {:else if sleeping}
-    <div class="absolute right-50 bottom-11 animate-balloon-fade rounded-full border border-line bg-surface2 px-6 py-3 font-mono text-tiny whitespace-nowrap text-ink3 motion-reduce:animate-none">NAPPING · CLICK TO WAKE</div>
   {/if}
 
   <button
